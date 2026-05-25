@@ -103,6 +103,24 @@ function escapeHtml(text) {
     .replace(/'/g, '&#039;');
 }
 
+function getEl(id) {
+  return document.getElementById(id);
+}
+
+function hideEl(id) {
+  getEl(id)?.classList.add('hidden');
+}
+
+function showEl(id) {
+  getEl(id)?.classList.remove('hidden');
+}
+
+function setElValue(id, value) {
+  const el = getEl(id);
+  if (el) el.value = value;
+  return el;
+}
+
 function loadCart() {
   try {
     return normalizeCart(JSON.parse(localStorage.getItem('totalLakayCart') || '[]'));
@@ -1279,8 +1297,8 @@ document.getElementById('authBtn')?.addEventListener('click', () => {
   if (modal) modal.classList.remove('hidden');
   if (loginCard) loginCard.classList.remove('hidden');
   if (registerForm) registerForm.classList.add('hidden');
-  document.getElementById('loginEmail').value = '';
-  document.getElementById('loginPassword').value = '';
+  setElValue('loginEmail', '');
+  setElValue('loginPassword', '');
   applyLanguage();
 });
 
@@ -1291,8 +1309,9 @@ document.getElementById('closeRegisterModal')?.addEventListener('click', () => {
   document.getElementById('loginModal')?.classList.add('hidden');
 });
 document.getElementById('loginModal')?.addEventListener('click', (e) => {
-  if (e.target === document.getElementById('loginModal')) {
-    document.getElementById('loginModal').classList.add('hidden');
+  const loginModal = getEl('loginModal');
+  if (loginModal && e.target === loginModal) {
+    loginModal.classList.add('hidden');
   }
 });
 
@@ -1340,18 +1359,18 @@ document.getElementById('forgotPasswordLink')?.addEventListener('click', async (
 
 document.getElementById('switchToRegister')?.addEventListener('click', (e) => {
   e.preventDefault();
-  document.getElementById('loginFormCard').classList.add('hidden');
-  document.getElementById('registerForm').classList.remove('hidden');
-  document.getElementById('registerName').value = '';
-  document.getElementById('registerEmail').value = '';
-  document.getElementById('registerPassword').value = '';
+  getEl('loginFormCard')?.classList.add('hidden');
+  getEl('registerForm')?.classList.remove('hidden');
+  setElValue('registerName', '');
+  setElValue('registerEmail', '');
+  setElValue('registerPassword', '');
   applyLanguage();
 });
 
 document.getElementById('switchToLogin')?.addEventListener('click', (e) => {
   e.preventDefault();
-  document.getElementById('registerForm').classList.add('hidden');
-  document.getElementById('loginFormCard').classList.remove('hidden');
+  getEl('registerForm')?.classList.add('hidden');
+  getEl('loginFormCard')?.classList.remove('hidden');
   applyLanguage();
 });
 
@@ -1500,14 +1519,15 @@ async function loadNotifications() {
 
 document.getElementById('notifBtn')?.addEventListener('click', (e) => {
   e.stopPropagation();
-  document.getElementById('notifModal').classList.remove('hidden');
+  getEl('notifModal')?.classList.remove('hidden');
   renderNotifList();
 });
 document.getElementById('closeNotifModal')?.addEventListener('click', () => {
-  document.getElementById('notifModal')?.classList.add('hidden');
+  hideEl('notifModal');
 });
 document.getElementById('notifModal')?.addEventListener('click', (e) => {
-  if (e.target === document.getElementById('notifModal')) document.getElementById('notifModal').classList.add('hidden');
+  const notifModal = getEl('notifModal');
+  if (notifModal && e.target === notifModal) notifModal.classList.add('hidden');
 });
 function renderNotifList() {
   const list = document.getElementById('notifList');
@@ -1603,10 +1623,11 @@ function setActiveNav(activeId) {
 // MODAL ACHAT
 // ============================================
 document.getElementById('closeBuyModal')?.addEventListener('click', () => {
-  document.getElementById('buyModal')?.classList.add('hidden');
+  hideEl('buyModal');
 });
 document.getElementById('buyModal')?.addEventListener('click', (e) => {
-  if (e.target === document.getElementById('buyModal')) document.getElementById('buyModal').classList.add('hidden');
+  const buyModal = getEl('buyModal');
+  if (buyModal && e.target === buyModal) buyModal.classList.add('hidden');
 });
 document.getElementById('submitOrder')?.addEventListener('click', async () => {
   if (!currentUser) { showMessage(t('loginRequired'), 'error'); return; }
@@ -1723,7 +1744,7 @@ document.getElementById('submitOrder')?.addEventListener('click', async () => {
     });
 
     document.getElementById('buyModal')?.classList.add('hidden');
-    document.getElementById('orderAddress').value = '';
+    setElValue('orderAddress', '');
     const successMessage = paymentMethod === 'MonCash'
       ? '✅ Commande enregistrée. Complétez votre paiement MonCash depuis votre application MonCash.'
       : t('orderSuccess');
@@ -2293,16 +2314,16 @@ async function renderAdminDashboard(app) {
         showMessage(t('productAdded'), 'success');
       }
 
-      document.getElementById('adminProdId').value = '';
-      document.getElementById('adminProdName').value = '';
-      document.getElementById('adminProdPrice').value = '';
-      document.getElementById('adminProdOldPrice').value = '';
-      document.getElementById('adminProdCategory').value = 'clothing';
-      document.getElementById('adminProdStock').value = '';
-      document.getElementById('adminProdColors').value = '';
-      document.getElementById('adminProdSizes').value = '';
-      document.getElementById('adminProdImage').value = '';
-      document.getElementById('adminProdDesc').value = '';
+      setElValue('adminProdId', '');
+      setElValue('adminProdName', '');
+      setElValue('adminProdPrice', '');
+      setElValue('adminProdOldPrice', '');
+      setElValue('adminProdCategory', 'clothing');
+      setElValue('adminProdStock', '');
+      setElValue('adminProdColors', '');
+      setElValue('adminProdSizes', '');
+      setElValue('adminProdImage', '');
+      setElValue('adminProdDesc', '');
 
       await loadAllData(); renderView('admin');
     } catch (error) { showMessage(t('errorOccurred') + error.message, 'error'); }
@@ -2323,17 +2344,17 @@ async function renderAdminDashboard(app) {
       const productId = e.currentTarget.dataset.id;
       const product = products.find(p => p.id === productId);
       if (!product) return;
-      document.getElementById('adminProdId').value = product.id;
-      document.getElementById('adminProdName').value = gt(product.name) || '';
-      document.getElementById('adminProdPrice').value = product.price || '';
-      document.getElementById('adminProdOldPrice').value = product.oldPrice || '';
-      document.getElementById('adminProdCategory').value = product.category || 'clothing';
-      document.getElementById('adminProdStock').value = product.stock || 0;
-      document.getElementById('adminProdColors').value = (product.colors || []).join(', ');
-      document.getElementById('adminProdSizes').value = (product.sizes || []).join(', ');
-      document.getElementById('adminProdImage').value = product.image || '';
-      document.getElementById('adminProdDesc').value = gt(product.description) || '';
-      document.getElementById('adminAddProductForm').classList.remove('hidden');
+      setElValue('adminProdId', product.id);
+      setElValue('adminProdName', gt(product.name) || '');
+      setElValue('adminProdPrice', product.price || '');
+      setElValue('adminProdOldPrice', product.oldPrice || '');
+      setElValue('adminProdCategory', product.category || 'clothing');
+      setElValue('adminProdStock', product.stock || 0);
+      setElValue('adminProdColors', (product.colors || []).join(', '));
+      setElValue('adminProdSizes', (product.sizes || []).join(', '));
+      setElValue('adminProdImage', product.image || '');
+      setElValue('adminProdDesc', gt(product.description) || '');
+      getEl('adminAddProductForm')?.classList.remove('hidden');
     });
   });
 
@@ -2454,18 +2475,18 @@ async function renderAdminDashboard(app) {
       }
 
       showMessage(t('notifSent'), 'success');
-      document.getElementById('notifTitle').value = '';
-      const nr = document.getElementById('notifReason'); if(nr) nr.value = '';
-      document.getElementById('notifMessage').value = '';
-      document.getElementById('adminSendNotifForm').classList.add('hidden');
+      setElValue('notifTitle', '');
+      const nr = getEl('notifReason'); if (nr) nr.value = '';
+      setElValue('notifMessage', '');
+      hideEl('adminSendNotifForm');
     } catch (e) { showMessage(t('errorOccurred') + e.message, 'error'); }
   });
 
   // Save MonCash Config
   document.getElementById('saveMcConfig')?.addEventListener('click', async () => {
-    const clientId = document.getElementById('mcClientId').value.trim();
-    const clientSecret = document.getElementById('mcClientSecret').value.trim();
-    const mode = document.getElementById('mcMode').value;
+    const clientId = getEl('mcClientId')?.value.trim() || '';
+    const clientSecret = getEl('mcClientSecret')?.value.trim() || '';
+    const mode = getEl('mcMode')?.value || 'sandbox';
     try {
       await db.collection('settings').doc('moncash').set({ clientId, clientSecret, mode, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
       moncashConfig = { clientId, clientSecret, mode };
@@ -2475,9 +2496,9 @@ async function renderAdminDashboard(app) {
 
   document.getElementById('saveAiConfig')?.addEventListener('click', async () => {
     const config = {
-      apiKey: document.getElementById('aiApiKey').value.trim(),
-      model: document.getElementById('aiModel').value,
-      enabled: document.getElementById('aiEnabledToggle').checked,
+      apiKey: getEl('aiApiKey')?.value.trim() || '',
+      model: getEl('aiModel')?.value || '',
+      enabled: getEl('aiEnabledToggle')?.checked ?? false,
       maxTokens: AIConfig.maxTokens || 500,
       temperature: AIConfig.temperature || 0.7,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -2490,7 +2511,7 @@ async function renderAdminDashboard(app) {
   });
 
   document.getElementById('testAiConfig')?.addEventListener('click', async () => {
-    const testKey = document.getElementById('aiApiKey').value.trim();
+    const testKey = getEl('aiApiKey')?.value.trim() || '';
     if (!testKey) { showMessage("Tanpri mete yon kle API", "error"); return; }
     
     showMessage("Test IA an kous...", "info");
@@ -2511,7 +2532,7 @@ async function renderAdminDashboard(app) {
   });
 
   document.getElementById('diagAiConfig')?.addEventListener('click', async () => {
-    const key = document.getElementById('aiApiKey').value.trim();
+    const key = getEl('aiApiKey')?.value.trim() || '';
     if (!key) { showMessage("Entrez une clé pour le diagnostic", "error"); return; }
     showMessage("Récupération des modèles...", "info");
     try {
@@ -3126,9 +3147,9 @@ async function renderProfile(app) {
 
   // Save Profile Logic
   document.getElementById('saveProfileBtn')?.addEventListener('click', async () => {
-    const name = document.getElementById('profName').value.trim();
-    const address = document.getElementById('profAddress').value.trim();
-    const phone = document.getElementById('profPhone').value.trim();
+    const name = getEl('profName')?.value.trim() || '';
+    const address = getEl('profAddress')?.value.trim() || '';
+    const phone = getEl('profPhone')?.value.trim() || '';
 
     if (address && address.length < 5) {
       showMessage(t('invalidAddress'), 'error');
@@ -3353,7 +3374,8 @@ async function renderSettings(app) {
   // Language Change
   document.getElementById('settingsLang')?.addEventListener('change', (e) => {
     currentLang = e.target.value;
-    document.getElementById('langSwitch').value = currentLang;
+    const langSwitch = getEl('langSwitch');
+    if (langSwitch) langSwitch.value = currentLang;
     applyLanguage();
     renderView('settings'); // Refresh to update labels
   });
@@ -3485,23 +3507,23 @@ function attachBuyButtons() {
         variationContainer.innerHTML = html;
       }
 
-      document.getElementById('buyModal').classList.remove('hidden');
+      getEl('buyModal')?.classList.remove('hidden');
 
       try {
         const userDoc = await db.collection('users').doc(currentUser.uid).get();
         if (userDoc.exists) {
           const userData = userDoc.data();
-          if (userData.address) document.getElementById('orderAddress').value = userData.address;
-          if (userData.phone) document.getElementById('orderPhone').value = userData.phone;
+          if (userData.address) setElValue('orderAddress', userData.address);
+          if (userData.phone) setElValue('orderPhone', userData.phone);
         } else {
-          document.getElementById('orderAddress').value = '';
-          document.getElementById('orderPhone').value = '';
+          setElValue('orderAddress', '');
+          setElValue('orderPhone', '');
         }
         renderReviews(product.id);
         setupFormValidation();
       } catch (e) {
-        document.getElementById('orderAddress').value = '';
-        document.getElementById('orderPhone').value = '';
+        setElValue('orderAddress', '');
+        setElValue('orderPhone', '');
       }
     });
   });
@@ -3654,7 +3676,7 @@ document.getElementById('submitReviewBtn')?.addEventListener('click', async () =
   if (!hasPurchased) { showMessage(t('mustPurchaseToReview'), 'error'); return; }
 
   if (currentRating === 0) { showMessage(t('ratingError'), 'error'); return; }
-  const comment = document.getElementById('reviewComment').value.trim();
+  const comment = getEl('reviewComment')?.value.trim() || '';
   if (!comment) { showMessage(t('commentError'), 'error'); return; }
 
   try {
@@ -3678,7 +3700,7 @@ document.getElementById('submitReviewBtn')?.addEventListener('click', async () =
     });
 
     showMessage(t('reviewSuccess'));
-    document.getElementById('reviewComment').value = '';
+    setElValue('reviewComment', '');
     currentRating = 0;
     document.querySelectorAll('#starRating span').forEach(s => s.classList.remove('active'));
     renderReviews(selectedProductId);
@@ -4482,10 +4504,7 @@ function renderAdminCharts() {
 function toggleCartDrawer() {
   const drawer = document.getElementById('cartDrawer');
   const overlay = document.getElementById('drawerOverlay');
-  if (!drawer) {
-    console.warn('toggleCartDrawer: cart drawer element not found');
-    return;
-  }
+  if (!drawer) return;
 
   const isOpen = drawer.classList.contains('open');
   if (isOpen) {
@@ -4710,15 +4729,15 @@ async function renderCheckout(app) {
     const userDoc = await db.collection('users').doc(currentUser.uid).get();
     if (userDoc.exists) {
       const userData = userDoc.data();
-      if (userData.address) document.getElementById('checkoutAddress').value = userData.address;
-      if (userData.phone) document.getElementById('checkoutPhone').value = userData.phone;
+      if (userData.address) setElValue('checkoutAddress', userData.address);
+      if (userData.phone) setElValue('checkoutPhone', userData.phone);
     }
   }
 
   // Setup validation for these specific IDs
-  const addr = document.getElementById('checkoutAddress');
-  const ph = document.getElementById('checkoutPhone');
-  [addr, ph].forEach(el => {
+  const addr = getEl('checkoutAddress');
+  const ph = getEl('checkoutPhone');
+  [addr, ph].filter(Boolean).forEach(el => {
     el.addEventListener('input', (e) => {
       const parent = e.target.parentElement;
       const minLen = e.target.id === 'checkoutAddress' ? 10 : 8;
@@ -4732,10 +4751,10 @@ async function renderCheckout(app) {
     });
   });
 
-  document.getElementById('finalizeOrderBtn').addEventListener('click', async () => {
-    const address = document.getElementById('checkoutAddress').value.trim();
-    const phone = document.getElementById('checkoutPhone').value.trim();
-    const payment = document.getElementById('checkoutPayment').value;
+  document.getElementById('finalizeOrderBtn')?.addEventListener('click', async () => {
+    const address = getEl('checkoutAddress')?.value.trim() || '';
+    const phone = getEl('checkoutPhone')?.value.trim() || '';
+    const payment = getEl('checkoutPayment')?.value || '';
 
     if (address.length < 10 || phone.length < 8) {
       showMessage(t('fillAllFields'), 'error');
