@@ -1,0 +1,29 @@
+{
+    "name": "Total Lakay - Votre boutique en ligne",
+    "short_name": "Total Lakay",
+    "description": "Tout bagay lakay ou nan yon sèl klike",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#050a14",
+    "theme_color": "#c8963e",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "logo.jpeg",
+            "sizes": "192x192",
+            "type": "image/jpeg",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "logo.jpeg",
+            "sizes": "512x512",
+            "type": "image/jpeg",
+            "purpose": "any maskable"
+        }
+    ],
+    "lang": "ht",
+    "categories": [
+        "shopping",
+        "lifestyle"
+    ]
+}
