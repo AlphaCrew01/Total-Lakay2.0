@@ -121,6 +121,31 @@ function setElValue(id, value) {
   return el;
 }
 
+function resetAuthFields() {
+  setElValue('loginEmail', '');
+  setElValue('loginPassword', '');
+  setElValue('registerName', '');
+  setElValue('registerEmail', '');
+  setElValue('registerPassword', '');
+}
+
+function openAuthModal() {
+  const modal = getEl('loginModal');
+  const loginCard = getEl('loginFormCard');
+  const registerForm = getEl('registerForm');
+
+  if (!modal || !loginCard || !registerForm) {
+    showMessage('Le modal de connexion n’est pas disponible.', 'error');
+    return;
+  }
+
+  modal.classList.remove('hidden');
+  loginCard.classList.remove('hidden');
+  registerForm.classList.add('hidden');
+  resetAuthFields();
+  applyLanguage();
+}
+
 function loadCart() {
   try {
     return normalizeCart(JSON.parse(localStorage.getItem('totalLakayCart') || '[]'));
@@ -1290,17 +1315,26 @@ auth.onAuthStateChanged(async (user) => {
 // ============================================
 // BOUTON CONNEXION
 // ============================================
-document.getElementById('authBtn')?.addEventListener('click', () => {
-  const modal = document.getElementById('loginModal');
-  const loginCard = document.getElementById('loginFormCard');
-  const registerForm = document.getElementById('registerForm');
-  if (modal) modal.classList.remove('hidden');
-  if (loginCard) loginCard.classList.remove('hidden');
-  if (registerForm) registerForm.classList.add('hidden');
-  setElValue('loginEmail', '');
-  setElValue('loginPassword', '');
-  applyLanguage();
-});
+window.openAuthModal = openAuthModal;
+
+function setupHeaderActionButtons() {
+  const authBtn = document.getElementById('authBtn');
+  const cartBtn = document.getElementById('cartBtn');
+  const drawerOverlay = document.getElementById('drawerOverlay');
+
+  authBtn?.addEventListener('click', () => openAuthModal());
+
+  cartBtn?.addEventListener('click', () => {
+    if (!currentUser) {
+      showMessage(t('loginRequired'), 'error');
+      openAuthModal();
+      return;
+    }
+    toggleCartDrawer();
+  });
+
+  drawerOverlay?.addEventListener('click', () => toggleCartDrawer());
+}
 
 document.getElementById('closeLoginModal')?.addEventListener('click', () => {
   document.getElementById('loginModal')?.classList.add('hidden');
@@ -4333,6 +4367,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await initAIConfig();
   
   applyLanguage();
+  setupHeaderActionButtons();
 
   // Navigation Links (Menu & Footer)
   const navActions = [
@@ -4501,12 +4536,26 @@ function renderAdminCharts() {
   `).join('');
 }
 
-function toggleCartDrawer() {
+function getCartDrawerElements() {
   const drawer = document.getElementById('cartDrawer');
-  const overlay = document.getElementById('drawerOverlay');
-  if (!drawer) return;
+  if (!drawer) {
+    console.warn('toggleCartDrawer: cart drawer element not found');
+    return null;
+  }
 
+  return {
+    drawer,
+    overlay: document.getElementById('drawerOverlay')
+  };
+}
+
+function toggleCartDrawer() {
+  const elements = getCartDrawerElements();
+  if (!elements) return;
+
+  const { drawer, overlay } = elements;
   const isOpen = drawer.classList.contains('open');
+
   if (isOpen) {
     drawer.classList.remove('open');
     if (overlay) overlay.style.display = 'none';
