@@ -1,6 +1,6 @@
 // sw.js - Service Worker pour Total Lakay
 
-const CACHE_NAME = 'total-lakay-v7';
+const CACHE_NAME = 'total-lakay-v8';
 const urlsToCache = [
   './',
   'index.html',
@@ -8,6 +8,13 @@ const urlsToCache = [
   'style.css',
   'logo.jpeg',
   'manifest.json'
+];
+
+const NETWORK_FIRST_URLS = [
+  '/',
+  '/index.html',
+  '/app.js',
+  '/manifest.json'
 ];
 
 // Installation du Service Worker
@@ -48,33 +55,45 @@ self.addEventListener('fetch', event => {
       event.request.url.includes('firebase')) {
     return;
   }
+
+  const requestURL = new URL(event.request.url);
+  const isNetworkFirst = NETWORK_FIRST_URLS.includes(requestURL.pathname);
+
+  if (isNetworkFirst) {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          if (!response || response.status !== 200 || response.type !== 'basic') {
+            return response;
+          }
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache));
+          return response;
+        })
+        .catch(() => caches.match(event.request).then(cached => cached || caches.match('index.html')))
+    );
+    return;
+  }
   
   event.respondWith(
     caches.match(event.request)
       .then(response => {
-        // Retourne le cache si trouvé
         if (response) {
           return response;
         }
-        // Sinon, fait la requête réseau et met en cache
         return fetch(event.request)
           .then(response => {
-            // Vérifie que la réponse est valide
             if (!response || response.status !== 200 || response.type !== 'basic') {
               return response;
             }
-            
-            // Clone la réponse pour la mettre en cache
             const responseToCache = response.clone();
             caches.open(CACHE_NAME)
               .then(cache => {
                 cache.put(event.request, responseToCache);
               });
-            
             return response;
           })
           .catch(() => {
-            // Retourne une page hors-ligne si disponible
             if (event.request.mode === 'navigate') {
               return caches.match('index.html');
             }
