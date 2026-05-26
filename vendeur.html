@@ -79,13 +79,13 @@
       <button id="navAdmin" class="nav-item admin-only hidden">⚙️ <span data-i18n="admin">Admin</span></button>
 
       <!-- Panier -->
-      <button id="cartBtn" class="nav-item client-only user-only hidden">
+      <button id="cartBtn" class="nav-item client-only user-only hidden" onclick="handleCartClick()">
         🛒 <span data-i18n="cart">Panyen</span>
         <span id="cartBadge" class="cart-badge hidden">0</span>
       </button>
 
       <!-- Bouton Connexion / Déconnexion -->
-      <button id="authBtn" class="btn btn-gold btn-sm">🔐 <span data-i18n="login">Konekte</span></button>
+      <button id="authBtn" class="btn btn-gold btn-sm" onclick="openAuthModal()">🔐 <span data-i18n="login">Konekte</span></button>
       <button id="logoutBtn" class="btn btn-outline btn-sm hidden">🚪 <span data-i18n="logout">Dekonekte</span></button>
 
       <!-- Notifications -->

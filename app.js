@@ -129,7 +129,52 @@ function resetAuthFields() {
   setElValue('registerPassword', '');
 }
 
+function ensureLoginModalExists() {
+  if (getEl('loginModal')) return;
+
+  const template = document.createElement('div');
+  template.innerHTML = `
+    <div id="loginModal" class="modal hidden">
+      <div class="login-card glass view-fade-in">
+        <span class="close-modal" id="closeLoginModal">&times;</span>
+        <div id="loginFormCard">
+          <div class="login-header">
+            <img src="logo.jpeg" alt="Total Lakay" class="login-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            <div class="logo-icon-fallback">TL</div>
+            <h2 data-i18n="loginTitle">Konekte pou achte</h2>
+            <p data-i18n="welcome">Byenveni nan Total Lakay</p>
+          </div>
+          <button id="googleLoginBtn" class="btn-google">🟢 <span data-i18n="continueGoogle">Kontinye ak Google</span></button>
+          <div class="separator"><span data-i18n="or">oubyen</span></div>
+          <input type="email" id="loginEmail" placeholder="Email" data-i18n-placeholder="emailPlaceholder">
+          <input type="password" id="loginPassword" placeholder="Modpas" data-i18n-placeholder="passwordPlaceholder">
+          <button id="emailLoginBtn" class="btn btn-gold" style="width:100%; margin-top:0.5rem;">🔐 <span data-i18n="login">Konekte</span></button>
+          <a href="#" id="forgotPasswordLink" style="display: block; margin-top: 12px; font-size: 0.85rem; color: var(--gold); font-weight: 600; text-decoration: none; text-align: center;" data-i18n="forgotPassword">Mot de passe oublié ?</a>
+          <div class="login-switch">
+            <span data-i18n="noAccount">Pa gen kont?</span> <a href="#" id="switchToRegister" data-i18n="createAccount">Kreye yon kont</a>
+          </div>
+        </div>
+        <div id="registerForm" class="hidden">
+          <div class="login-header">
+            <h2 data-i18n="createAccountTitle">Kreye kont ou</h2>
+          </div>
+          <input type="text" id="registerName" placeholder="Non ou" data-i18n-placeholder="namePlaceholder">
+          <input type="email" id="registerEmail" placeholder="Email" data-i18n-placeholder="emailPlaceholder">
+          <input type="password" id="registerPassword" placeholder="Modpas (min 6 karaktè)" data-i18n-placeholder="passwordMin">
+          <button id="registerBtn" class="btn btn-gold" style="width:100%;">✅ <span data-i18n="createAccount">Kreye kont</span></button>
+          <div class="login-switch">
+            <span data-i18n="alreadyAccount">Deja gen yon kont?</span> <a href="#" id="switchToLogin" data-i18n="login">Konekte</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(template.firstElementChild);
+}
+
 function openAuthModal() {
+  ensureLoginModalExists();
+
   const modal = getEl('loginModal');
   const loginCard = getEl('loginFormCard');
   const registerForm = getEl('registerForm');
@@ -145,6 +190,15 @@ function openAuthModal() {
   resetAuthFields();
   applyLanguage();
   modal.classList.remove('hidden');
+}
+
+function handleCartClick() {
+  if (!currentUser) {
+    showMessage(t('loginRequired'), 'error');
+    openAuthModal();
+    return;
+  }
+  toggleCartDrawer();
 }
 
 function loadCart() {
@@ -1317,6 +1371,7 @@ auth.onAuthStateChanged(async (user) => {
 // BOUTON CONNEXION
 // ============================================
 window.openAuthModal = openAuthModal;
+window.handleCartClick = handleCartClick;
 
 function setupHeaderActionButtons() {
   const authBtn = document.getElementById('authBtn');
@@ -1324,16 +1379,7 @@ function setupHeaderActionButtons() {
   const drawerOverlay = document.getElementById('drawerOverlay');
 
   authBtn?.addEventListener('click', () => openAuthModal());
-
-  cartBtn?.addEventListener('click', () => {
-    if (!currentUser) {
-      showMessage(t('loginRequired'), 'error');
-      openAuthModal();
-      return;
-    }
-    toggleCartDrawer();
-  });
-
+  cartBtn?.addEventListener('click', () => handleCartClick());
   drawerOverlay?.addEventListener('click', () => toggleCartDrawer());
 }
 
