@@ -134,16 +134,17 @@ function openAuthModal() {
   const loginCard = getEl('loginFormCard');
   const registerForm = getEl('registerForm');
 
-  if (!modal || !loginCard || !registerForm) {
+  if (!modal) {
+    console.warn('openAuthModal: loginModal element not found');
     showMessage('Le modal de connexion n’est pas disponible.', 'error');
     return;
   }
 
-  modal.classList.remove('hidden');
-  loginCard.classList.remove('hidden');
-  registerForm.classList.add('hidden');
+  if (loginCard) loginCard.classList.remove('hidden');
+  if (registerForm) registerForm.classList.add('hidden');
   resetAuthFields();
   applyLanguage();
+  modal.classList.remove('hidden');
 }
 
 function loadCart() {
@@ -4363,11 +4364,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   loadTheme();
   initPageRole();
   
+  setupHeaderActionButtons();
+
   // Charger la configuration IA AVANT tout
-  await initAIConfig();
+  try {
+    await initAIConfig();
+  } catch (error) {
+    console.warn('initAIConfig failed:', error);
+  }
   
   applyLanguage();
-  setupHeaderActionButtons();
 
   // Navigation Links (Menu & Footer)
   const navActions = [
