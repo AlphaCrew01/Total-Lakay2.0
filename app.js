@@ -190,6 +190,9 @@ function openAuthModal() {
   resetAuthFields();
   applyLanguage();
   modal.classList.remove('hidden');
+  
+  // Attacher les event listeners après l'affichage du modal
+  setTimeout(() => attachModalEventListeners(), 0);
 }
 
 function handleCartClick() {
@@ -1383,29 +1386,55 @@ function setupHeaderActionButtons() {
   drawerOverlay?.addEventListener('click', () => toggleCartDrawer());
 }
 
-document.getElementById('closeLoginModal')?.addEventListener('click', () => {
-  document.getElementById('loginModal')?.classList.add('hidden');
-});
-document.getElementById('closeRegisterModal')?.addEventListener('click', () => {
-  document.getElementById('loginModal')?.classList.add('hidden');
-});
-document.getElementById('loginModal')?.addEventListener('click', (e) => {
-  const loginModal = getEl('loginModal');
-  if (loginModal && e.target === loginModal) {
-    loginModal.classList.add('hidden');
-  }
-});
+function attachModalEventListeners() {
+  const googleBtn = getEl('googleLoginBtn');
+  const emailBtn = getEl('emailLoginBtn');
+  const registerBtn = getEl('registerBtn');
+  const closeBtn = getEl('closeLoginModal');
+  const switchToRegister = getEl('switchToRegister');
+  const switchToLogin = getEl('switchToLogin');
+  const forgotLink = getEl('forgotPasswordLink');
 
-document.getElementById('googleLoginBtn')?.addEventListener('click', () => {
+  if (googleBtn) {
+    googleBtn.removeEventListener('click', googleLoginHandler);
+    googleBtn.addEventListener('click', googleLoginHandler);
+  }
+  if (emailBtn) {
+    emailBtn.removeEventListener('click', emailLoginHandler);
+    emailBtn.addEventListener('click', emailLoginHandler);
+  }
+  if (registerBtn) {
+    registerBtn.removeEventListener('click', registerHandler);
+    registerBtn.addEventListener('click', registerHandler);
+  }
+  if (closeBtn) {
+    closeBtn.removeEventListener('click', closeModalHandler);
+    closeBtn.addEventListener('click', closeModalHandler);
+  }
+  if (switchToRegister) {
+    switchToRegister.removeEventListener('click', switchToRegisterHandler);
+    switchToRegister.addEventListener('click', switchToRegisterHandler);
+  }
+  if (switchToLogin) {
+    switchToLogin.removeEventListener('click', switchToLoginHandler);
+    switchToLogin.addEventListener('click', switchToLoginHandler);
+  }
+  if (forgotLink) {
+    forgotLink.removeEventListener('click', forgotPasswordHandler);
+    forgotLink.addEventListener('click', forgotPasswordHandler);
+  }
+}
+
+function googleLoginHandler() {
   const provider = new firebase.auth.GoogleAuthProvider();
   auth.signInWithPopup(provider)
-    .then(() => { document.getElementById('loginModal')?.classList.add('hidden'); showMessage(t('welcomeBack'), 'success'); })
+    .then(() => { getEl('loginModal')?.classList.add('hidden'); showMessage(t('welcomeBack'), 'success'); })
     .catch(err => showMessage(t('errorOccurred') + err.message, 'error'));
-});
+}
 
-document.getElementById('emailLoginBtn')?.addEventListener('click', () => {
-  const email = document.getElementById('loginEmail')?.value.trim();
-  const password = document.getElementById('loginPassword')?.value;
+function emailLoginHandler() {
+  const email = getEl('loginEmail')?.value.trim();
+  const password = getEl('loginPassword')?.value;
   if (!email || !password) { showMessage(t('fillAllFields'), 'error'); return; }
   auth.signInWithEmailAndPassword(email, password)
     .then((userCredential) => {
@@ -1414,51 +1443,19 @@ document.getElementById('emailLoginBtn')?.addEventListener('click', () => {
         userCredential.user.sendEmailVerification().catch(() => { });
         auth.signOut(); return;
       }
-      document.getElementById('loginModal')?.classList.add('hidden');
+      getEl('loginModal')?.classList.add('hidden');
       showMessage(t('welcomeBack'), 'success');
     })
     .catch(err => {
       if (err.code === 'auth/user-not-found') showMessage(t('accountNotFound'), 'error');
       else showMessage(t('errorOccurred') + err.message, 'error');
     });
-});
+}
 
-document.getElementById('forgotPasswordLink')?.addEventListener('click', async (e) => {
-  e.preventDefault();
-  const email = document.getElementById('loginEmail')?.value.trim();
-  if (!email) {
-    showMessage(t('enterEmailReset'), 'error');
-    return;
-  }
-  try {
-    await auth.sendPasswordResetEmail(email);
-    showMessage(t('resetEmailSent'), 'success');
-  } catch (err) {
-    showMessage(t('errorOccurred') + err.message, 'error');
-  }
-});
-
-document.getElementById('switchToRegister')?.addEventListener('click', (e) => {
-  e.preventDefault();
-  getEl('loginFormCard')?.classList.add('hidden');
-  getEl('registerForm')?.classList.remove('hidden');
-  setElValue('registerName', '');
-  setElValue('registerEmail', '');
-  setElValue('registerPassword', '');
-  applyLanguage();
-});
-
-document.getElementById('switchToLogin')?.addEventListener('click', (e) => {
-  e.preventDefault();
-  getEl('registerForm')?.classList.add('hidden');
-  getEl('loginFormCard')?.classList.remove('hidden');
-  applyLanguage();
-});
-
-document.getElementById('registerBtn')?.addEventListener('click', () => {
-  const name = document.getElementById('registerName')?.value.trim();
-  const email = document.getElementById('registerEmail')?.value.trim();
-  const password = document.getElementById('registerPassword')?.value;
+function registerHandler() {
+  const name = getEl('registerName')?.value.trim();
+  const email = getEl('registerEmail')?.value.trim();
+  const password = getEl('registerPassword')?.value;
   if (!name || !email || !password) { showMessage(t('fillAllFields'), 'error'); return; }
   if (password.length < 6) { showMessage(t('passwordError'), 'error'); return; }
   auth.createUserWithEmailAndPassword(email, password)
@@ -1469,11 +1466,54 @@ document.getElementById('registerBtn')?.addEventListener('click', () => {
         email, displayName: name, role: 'client', emailVerified: false,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
-      document.getElementById('loginModal')?.classList.add('hidden');
+      getEl('loginModal')?.classList.add('hidden');
       await auth.signOut();
       showMessage(t('emailVerifySent'), 'success');
     })
     .catch(err => showMessage(t('errorOccurred') + err.message, 'error'));
+}
+
+function closeModalHandler() {
+  getEl('loginModal')?.classList.add('hidden');
+}
+
+function switchToRegisterHandler(e) {
+  e.preventDefault();
+  getEl('loginFormCard')?.classList.add('hidden');
+  getEl('registerForm')?.classList.remove('hidden');
+  setElValue('registerName', '');
+  setElValue('registerEmail', '');
+  setElValue('registerPassword', '');
+  applyLanguage();
+}
+
+function switchToLoginHandler(e) {
+  e.preventDefault();
+  getEl('registerForm')?.classList.add('hidden');
+  getEl('loginFormCard')?.classList.remove('hidden');
+  applyLanguage();
+}
+
+async function forgotPasswordHandler(e) {
+  e.preventDefault();
+  const email = getEl('loginEmail')?.value.trim();
+  if (!email) {
+    showMessage(t('enterEmailReset'), 'error');
+    return;
+  }
+  try {
+    await auth.sendPasswordResetEmail(email);
+    showMessage(t('resetEmailSent'), 'success');
+  } catch (err) {
+    showMessage(t('errorOccurred') + err.message, 'error');
+  }
+}
+
+// Écouter la touche Escape pour fermer le modal
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    getEl('loginModal')?.classList.add('hidden');
+  }
 });
 
 document.getElementById('logoutBtn')?.addEventListener('click', () => {
