@@ -109,6 +109,14 @@ function attachListeners() {
       if (view) navigate(view);
     });
   });
+  // Product detail handler (delegated)
+  elements.appContent.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-detail]');
+    if (btn) {
+      const id = btn.dataset.detail;
+      openProductDetail(id);
+    }
+  });
   window.addEventListener('hashchange', applyRouteFromHash);
 }
 
@@ -599,8 +607,61 @@ function attachProductActions() {
       const product = state.products.find((item) => item.id === productId);
       if (!product) return;
       addToCart(product);
+      animateAddToCart(button, product);
     });
   });
+  elements.appContent.querySelectorAll('[data-detail]').forEach((button) => {
+    button.addEventListener('click', () => {
+      openProductDetail(button.dataset.detail);
+    });
+  });
+}
+
+function animateAddToCart(button, product) {
+  try {
+    const img = button.closest('.product-card')?.querySelector('img');
+    if (!img) return;
+    const rect = img.getBoundingClientRect();
+    const flying = img.cloneNode(true);
+    flying.className = 'flying-img';
+    flying.style.left = rect.left + 'px';
+    flying.style.top = rect.top + 'px';
+    document.body.appendChild(flying);
+    const cartRect = document.getElementById('topCartBadge')?.getBoundingClientRect();
+    requestAnimationFrame(() => {
+      flying.style.transform = `translate(${(cartRect?.left || window.innerWidth) - rect.left}px, ${(cartRect?.top || 24) - rect.top}px) scale(.2)`;
+      flying.style.opacity = '0.2';
+    });
+    setTimeout(() => flying.remove(), 700);
+  } catch (e) { /* ignore */ }
+}
+
+function openProductDetail(productId) {
+  const product = state.products.find((p) => p.id === productId);
+  const modal = document.getElementById('productModal');
+  const content = document.getElementById('productModalContent');
+  if (!product || !modal || !content) return;
+  content.innerHTML = `
+    <div class="product-image"><img src="${escapeHtml(product.image || 'logo.jpeg')}" alt="${escapeHtml(product.name)}"></div>
+    <div class="meta">
+      <h3>${escapeHtml(product.name)}</h3>
+      <p class="muted">${escapeHtml(product.category || '')}</p>
+      <p>${escapeHtml(product.description || 'Pa gen deskripsyon')}</p>
+      <div style="margin-top:1rem;"><strong class="product-price">${formatMoney(product.price)}</strong></div>
+      <div style="margin-top:1rem;"><button class="btn btn-gold" data-add="${product.id}">Ajoute nan panyen</button></div>
+    </div>
+  `;
+  modal.classList.remove('hidden');
+  document.getElementById('overlay').classList.remove('hidden');
+  modal.querySelector('.modal-panel').classList.add('view-enter');
+  document.getElementById('productModalClose').onclick = () => closeProductDetail();
+}
+
+function closeProductDetail() {
+  const modal = document.getElementById('productModal');
+  if (!modal) return;
+  modal.classList.add('hidden');
+  document.getElementById('overlay').classList.add('hidden');
 }
 
 function renderCart() {

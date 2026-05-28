@@ -66,6 +66,10 @@
     </aside>
 
     <div class="workspace">
+      <div class="immersive-bg" aria-hidden="true">
+        <div class="blob blob-a"></div>
+        <div class="blob blob-b"></div>
+      </div>
       <header class="topbar">
         <div class="topbar-left">
           <button id="sidebarOpen" class="icon-button">☰</button>
@@ -107,6 +111,14 @@
           </div>
         </section>
       </main>
+
+      <!-- Product detail modal (immersive) -->
+      <div id="productModal" class="modal hidden" aria-hidden="true">
+        <div class="modal-panel card product-modal">
+          <button class="modal-close" id="productModalClose" aria-label="Fèmen">×</button>
+          <div id="productModalContent" class="product-modal-content"></div>
+        </div>
+      </div>
 
       <footer class="footer">
         <div class="footer-row">

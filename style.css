@@ -205,3 +205,36 @@ img { max-width: 100%; display: block; }
   .sidebar-open .sidebar { transform: translateX(0); }
   .workspace { padding-top: 1rem; }
 }
+
+/* Immersive visuals */
+.immersive-bg { position: absolute; inset: 0; pointer-events: none; z-index: -1; overflow: hidden; }
+.immersive-bg .blob { position: absolute; filter: blur(60px); opacity: 0.85; mix-blend-mode: screen; transform: translate3d(0,0,0); }
+.blob-a { width: 520px; height: 520px; background: radial-gradient(circle at 20% 20%, rgba(188,141,44,0.22), transparent 35%); top: -120px; left: -80px; animation: floatA 20s linear infinite; }
+.blob-b { width: 420px; height: 420px; background: radial-gradient(circle at 80% 80%, rgba(12,124,255,0.14), transparent 35%); bottom: -100px; right: -60px; animation: floatB 24s linear infinite; }
+
+@keyframes floatA { 0% { transform: translateY(0) rotate(0);} 50% { transform: translateY(18px) rotate(14deg);} 100% { transform: translateY(0) rotate(0);} }
+@keyframes floatB { 0% { transform: translateY(0) rotate(0);} 50% { transform: translateY(-22px) rotate(-8deg);} 100% { transform: translateY(0) rotate(0);} }
+
+/* Product modal enhancements */
+.product-modal { max-width: 920px; display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; align-items: center; }
+.product-modal-content img { width: 100%; border-radius: 20px; box-shadow: var(--shadow-card); }
+.product-modal-content .meta { padding: 0.5rem 0; }
+
+/* Animations and micro-interactions */
+.view-enter { animation: viewEnter 420ms var(--transition) both; }
+@keyframes viewEnter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+.product-card { perspective: 1200px; }
+.product-card:hover { transform: translateY(-8px) rotateX(4deg) scale(1.02); }
+
+/* Fly to cart */
+.flying-img { position: fixed; width: 64px; height: 64px; border-radius: 12px; z-index: 9999; pointer-events: none; transition: transform 520ms cubic-bezier(.2,.9,.2,1), opacity 520ms; }
+
+/* Toast subtle slide */
+.toast { transform-origin: right bottom; animation: toastIn 360ms ease; }
+@keyframes toastIn { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+/* Product skeleton */
+.skeleton-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+.skeleton-card { height: 180px; border-radius: 18px; background: linear-gradient(90deg, rgba(0,0,0,0.03) 0%, rgba(0,0,0,0.06) 50%, rgba(0,0,0,0.03) 100%); animation: shimmer 1.4s linear infinite; }
+@keyframes shimmer { 0% { background-position: -200px 0; } 100% { background-position: 200px 0; } }
