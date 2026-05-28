@@ -1,184 +1,118 @@
 <!DOCTYPE html>
 <html lang="ht">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Total Lakay — Platfòm e-commerce premium</title>
-  <meta name="description" content="Total Lakay se yon platfòm e-commerce ayisyen premium pou achte, vann ak swiv livrezon nan yon eksperyans modèn, rapid ak sekirize.">
-  <meta name="theme-color" content="#0b1d40">
-  <link rel="icon" href="logo.jpeg" type="image/jpeg">
-  <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="logo.jpeg">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Total Lakay — Eksperyans Immersive</title>
+  <meta name="description" content="Total Lakay — Platfòm e-commerce ayisyen, eksperyans immersive ak animations, galri, ak micro-interactions.">
+  <link rel="icon" href="logo.jpeg">
   <link rel="stylesheet" href="style.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="app.js" defer></script>
+  <script defer src="app.js"></script>
 </head>
 <body>
-  <div id="splashScreen" class="splash-screen">
-    <div class="splash-card">
-      <div class="splash-logo">TL</div>
-      <div>
-        <h1>Total Lakay</h1>
-        <p>W ap chaje yon eksperyans e-commerce nouvo, anviwonman rapid ak élégance profesyonèl.</p>
-      </div>
+  <!-- Preloader / cinematic intro -->
+  <div id="preloader" class="preloader">
+    <div class="preloader-stage">
+      <div class="logo-glow">TL</div>
+      <h2 class="pre-title">Total Lakay</h2>
+      <p class="pre-sub">Yon eksperyans e-commerce ki santi li vivan</p>
+      <div class="pre-bar"><div class="pre-progress" id="preProgress"></div></div>
     </div>
   </div>
 
-  <div class="app-shell" id="appShell">
-    <aside class="sidebar">
-      <div class="brand-panel">
-        <div class="brand-symbol">TL</div>
-        <div>
-          <p class="brand-name">Total Lakay</p>
-          <p class="brand-tag">Tout bagay lakay ou</p>
-        </div>
+  <div id="app" class="app">
+    <header class="site-header">
+      <div class="brand">
+        <div class="brand-logo">TL</div>
+        <div class="brand-text"><strong>Total</strong><span>Lakay</span></div>
       </div>
-      <nav class="sidebar-nav" aria-label="Navigation principale">
-        <button data-view="dashboard" class="nav-link nav-active">Dashboard</button>
+      <nav class="main-nav">
+        <button data-view="dashboard" class="nav-link nav-active">Home</button>
         <button data-view="shop" class="nav-link">Boutik</button>
-        <button data-view="orders" class="nav-link">Kòmand</button>
-        <button data-view="notifications" class="nav-link">Notifikasyon</button>
-        <button data-view="profile" class="nav-link">Profil</button>
+        <button data-view="orders" class="nav-link user-only hidden">Kòmand</button>
         <button data-view="admin" class="nav-link admin-only hidden">Admin</button>
-        <button data-view="logistics" class="nav-link vendor-only hidden">Lojistik</button>
       </nav>
-      <div class="sidebar-meta">
-        <div class="small-card">
-          <span>Total pwodwi</span>
-          <strong id="sidebarProductCount">0</strong>
-        </div>
-        <div class="small-card">
-          <span>Revni</span>
-          <strong id="sidebarRevenue">0 HTG</strong>
-        </div>
+      <div class="header-actions">
+        <div class="search-wrap"><input id="searchInput" placeholder="Rechèch pwodwi..." aria-label="Rechèch"></div>
+        <button id="authButton" class="btn">Konekte</button>
+        <button id="cartToggle" class="icon">🛒<span id="topCartBadge" class="badge hidden">0</span></button>
       </div>
-      <div class="sidebar-footer">
-        <p>Ajiste anviwònman ou pou yon eksperyans plis pèsonalize.</p>
-        <button id="sidebarToggle" class="btn btn-outline">Fèmen</button>
-      </div>
-    </aside>
+    </header>
 
-    <div class="workspace">
-      <div class="immersive-bg" aria-hidden="true">
-        <div class="blob blob-a"></div>
-        <div class="blob blob-b"></div>
-      </div>
-      <header class="topbar">
-        <div class="topbar-left">
-          <button id="sidebarOpen" class="icon-button">☰</button>
-          <div class="search-box">
-            <input id="searchInput" type="search" placeholder="Rechèch pwodwi oswa kategori..." aria-label="Rechèch">
-            <button id="searchSubmit" class="btn btn-gold">Chèche</button>
-          </div>
+    <main id="appContent" class="content">
+      <!-- Hero cinematic with layers and carousel -->
+      <section class="hero cinematic" id="hero">
+        <div class="hero-layers">
+          <div class="layer bg-layer"></div>
+          <div class="layer mid-layer"></div>
+          <div class="layer fg-layer"></div>
         </div>
-        <div class="topbar-right">
-          <div class="chip">HTG</div>
-          <button id="themeToggle" class="icon-button" aria-label="Chanje tema">🌓</button>
-          <button id="notifToggle" class="icon-button user-only hidden" aria-label="Ouvri notifikasyon">🔔<span class="badge hidden" id="topNotifBadge">0</span></button>
-          <button id="cartToggle" class="icon-button user-only hidden" aria-label="Ouvri panyen">🛒<span class="badge hidden" id="topCartBadge">0</span></button>
-          <button id="authButton" class="btn btn-gold">Konekte</button>
-          <button id="logoutButton" class="btn btn-outline hidden">Dekonekte</button>
-        </div>
-      </header>
-
-      <main id="appContent" class="main-view">
-        <section class="hero-block card">
+        <div class="hero-inner">
           <div class="hero-copy">
-            <span class="eyebrow">Premium E-commerce</span>
-            <h1>Platfòm e-commerce ayisyen ki adapte ak vizyon mondyal.</h1>
-            <p>Jwenn pwodui, suiv kòmand, jere livrezon, epi viv yon eksperyans ki rapid, entelijan ak bèl.</p>
-            <div class="hero-actions">
-              <button class="btn btn-gold" data-view="shop">Ale nan boutik</button>
-              <button class="btn btn-outline user-only hidden" data-view="orders">Kòmand mwen</button>
+            <h1 class="hero-title">Viv yon eksperyans Total Lakay</h1>
+            <p class="hero-desc">Dekouvri koleksyon seleksyone, livrezon vit, epi yon koòdone ki reponn emosyon.</p>
+            <div class="hero-cta">
+              <button class="btn btn-primary" data-view="shop">Ale nan Boutik</button>
+              <button class="btn btn-ghost" data-view="shop">Dekouvri Koleksyon</button>
             </div>
           </div>
-          <div class="hero-visual">
-            <div class="hero-card hero-card-1">
-              <span>Nouvo koleksyon fashion</span>
-              <p>Style modèn, livraison vit.</p>
+          <div class="hero-media" aria-hidden="true">
+            <div class="media-stack">
+              <img data-src="https://images.unsplash.com/photo-1602810315874-4f2a6b0b2f1b?w=1200&q=80&auto=format&fit=crop" alt="fashion" class="lazy media-item" />
+              <img data-src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200&q=80&auto=format&fit=crop" alt="delivery" class="lazy media-item" />
+              <img data-src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=1200&q=80&auto=format&fit=crop" alt="market" class="lazy media-item" />
             </div>
-            <div class="hero-card hero-card-2">
-              <span>Livrezon rapid</span>
-              <p>Menm jou oubyen demen.</p>
-            </div>
-          </div>
-        </section>
-      </main>
-
-      <!-- Product detail modal (immersive) -->
-      <div id="productModal" class="modal hidden" aria-hidden="true">
-        <div class="modal-panel card product-modal">
-          <button class="modal-close" id="productModalClose" aria-label="Fèmen">×</button>
-          <div id="productModalContent" class="product-modal-content"></div>
-        </div>
-      </div>
-
-      <footer class="footer">
-        <div class="footer-row">
-          <div>
-            <p class="footer-title">Total Lakay</p>
-            <p>Solisyon e-commerce ayisyen ki sèvi kliyan avèk élégance.</p>
-          </div>
-          <div class="footer-links">
-            <a href="#" data-view="shop">Boutik</a>
-            <a href="#" data-view="profile">Profil</a>
-            <a href="#" data-view="orders">Kòmand</a>
           </div>
         </div>
-        <p class="footer-copy">Total Lakay © 2026. Tout dwa rezève.</p>
+      </section>
+
+      <!-- Featured gallery with 3D cards -->
+      <section class="featured section">
+        <h2 class="section-title">Koleksyon Nou Rekòmande</h2>
+        <div class="cards-grid" id="featuredGrid"></div>
+      </section>
+
+      <!-- Immersive product grid -->
+      <section class="products section">
+        <div class="section-head"><h2>Tout Pwodwi</h2><div class="filters"><select id="sortSelect"><option value="popular">Pi Popilè</option><option value="new">Dènye</option></select></div></div>
+        <div id="productGrid" class="product-grid"></div>
+      </section>
+
+      <!-- Cinematic footer area with parallax shapes -->
+      <footer class="site-footer">
+        <div class="footer-inner">
+          <div class="footer-brand">Total Lakay — Eksperyans Premium</div>
+          <nav class="footer-nav"><a href="#">About</a><a href="#">Kontak</a><a href="#">Tèm</a></nav>
+        </div>
+        <div class="footer-credit">© Total Lakay 2026</div>
       </footer>
-    </div>
-  </div>
+    </main>
 
-  <div id="authModal" class="modal hidden" aria-hidden="true">
-    <div class="modal-panel card">
-      <button class="modal-close" id="authModalClose" aria-label="Fèmen">×</button>
-      <div class="modal-grid">
-        <div class="auth-intro">
-          <p class="eyebrow">Antre nan kont ou</p>
-          <h2>Konekte oswa kreye kont</h2>
-          <p>Jwenn aksè rapid ak tout sèvis Total Lakay.</p>
-        </div>
-        <form id="authForm" class="auth-form">
-          <div class="input-group">
-            <label for="authEmail">Email</label>
-            <input id="authEmail" type="email" placeholder="ex: ou@exemple.com" required>
-          </div>
-          <div class="input-group">
-            <label for="authPassword">Modpas</label>
-            <input id="authPassword" type="password" placeholder="••••••••" required>
-          </div>
-          <button id="authSubmit" class="btn btn-gold">Konekte</button>
-          <button id="authGoogle" type="button" class="btn btn-outline">Kontinye ak Google</button>
-          <p class="form-note">Pa gen kont? <button type="button" id="switchRegister" class="link-button">Kreye yon kont</button></p>
+    <!-- Modals and overlays -->
+    <div id="overlay" class="overlay hidden"></div>
+    <div id="authModal" class="modal hidden">
+      <div class="modal-panel">
+        <button class="modal-close" id="authModalClose">×</button>
+        <h3>Konekte</h3>
+        <form id="authForm">
+          <input id="authEmail" type="email" placeholder="Email">
+          <input id="authPassword" type="password" placeholder="Modpas">
+          <div class="form-actions"><button id="authSubmit" class="btn btn-primary">Konekte</button><button id="authGoogle" type="button" class="btn btn-ghost">Google</button></div>
         </form>
       </div>
     </div>
-  </div>
 
-  <aside id="cartDrawer" class="drawer hidden" aria-hidden="true">
-    <div class="drawer-header">
-      <h3>Panyen ou</h3>
-      <button class="icon-button" id="closeCart">×</button>
-    </div>
-    <div id="cartItems" class="cart-items"></div>
-    <div class="drawer-footer">
-      <div class="drawer-total">
-        <span>Total</span>
-        <strong id="cartTotalAmount">0 HTG</strong>
+    <aside id="cartDrawer" class="drawer hidden">
+      <div class="drawer-panel">
+        <header><h4>Panyen</h4><button id="closeCart">×</button></header>
+        <div id="cartItems" class="cart-items"></div>
+        <div class="drawer-actions"><div class="total">Total: <strong id="cartTotalAmount">0 HTG</strong></div><button id="checkoutButton" class="btn btn-primary">Peye</button></div>
       </div>
-      <button id="checkoutButton" class="btn btn-gold full-width">Peye kounye a</button>
-    </div>
-  </aside>
-
-  <div id="overlay" class="overlay hidden"></div>
-  <div id="toastContainer" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+    </aside>
+  </div>
 </body>
 </html>
