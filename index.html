@@ -1,49 +1,180 @@
 <!DOCTYPE html>
 <html lang="ht">
+
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>Total Lakay — Eksperyans Immersive</title>
-  <meta name="description" content="Total Lakay — Platfòm e-commerce ayisyen, eksperyans immersive ak animations, galri, ak micro-interactions.">
-  <link rel="icon" href="logo.jpeg">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Total Lakay - Tout bagay lakay ou nan yon sèl klike</title>
+  <meta name="description" content="Total Lakay - Votre boutique en ligne. Tout bagay lakay ou nan yon sèl klike.">
+
+  <!-- Favicon -->
+  <link rel="icon" href="logo.jpeg" type="image/jpeg">
+  <link rel="shortcut icon" href="logo.jpeg" type="image/jpeg">
+
+  <!-- PWA META TAGS -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#050a14">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Total Lakay">
+  <link rel="apple-touch-icon" href="logo.jpeg">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="application-name" content="Total Lakay">
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap"
+    rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Styles -->
   <link rel="stylesheet" href="style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-  <script defer src="app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-remote-config-compat.js"></script>
+
+  <!-- Main Script -->
+  <script src="app.js" defer></script>
+
 </head>
+
 <body>
-  <!-- Preloader / cinematic intro -->
-  <div id="preloader" class="preloader">
-    <div class="preloader-stage">
-      <div class="logo-glow">TL</div>
-      <h2 class="pre-title">Total Lakay</h2>
-      <p class="pre-sub">Yon eksperyans e-commerce ki santi li vivan</p>
-      <div class="pre-bar"><div class="pre-progress" id="preProgress"></div></div>
+
+  <!-- Navbar -->
+  <header class="navbar">
+    <div class="logo-area">
+      <img src="logo.jpeg" alt="Total Lakay" class="logo-img" loading="lazy"
+        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+      <div class="logo-icon-fallback">TL</div>
+      <div class="logo-text">
+        Total Lakay
+        <small>Tout bagay lakay ou</small>
+      </div>
+    </div>
+
+    <nav class="nav-links">
+      <button id="navHome" class="nav-item client-only active">🏠 <span data-i18n="home">Akèy</span></button>
+      <button id="navShop" class="nav-item client-only">🛍️ <span data-i18n="shop">Boutik</span></button>
+      <button id="navAI" class="nav-item client-only">🤖 <span data-i18n="aiAssistant">Asistan IA</span></button>
+      <button id="navLogistics" class="nav-item admin-or-vendor-only hidden">🚚 <span>Livrez</span></button>
+
+      <button id="navProfile" class="nav-item client-only user-only hidden">👤 <span data-i18n="profile">Profil</span></button>
+
+      <button id="navAdmin" class="nav-item admin-only hidden">⚙️ <span data-i18n="admin">Admin</span></button>
+
+      <button id="cartBtn" class="nav-item client-only user-only hidden" onclick="toggleCartDrawer()">
+        🛒 <span data-i18n="cart">Panyen</span>
+        <span id="cartBadge" class="cart-badge hidden">0</span>
+      </button>
+
+      <button id="authBtn" class="btn btn-gold btn-sm">🔐 <span data-i18n="login">Konekte</span></button>
+      <button id="logoutBtn" class="btn btn-outline btn-sm hidden">🚪 <span data-i18n="logout">Dekonekte</span></button>
+
+      <div style="position:relative;">
+        <button id="notifBtn" class="notif-btn user-only hidden">🔔</button>
+        <span id="notifBadge" class="notif-badge hidden">0</span>
+      </div>
+
+      <select id="langSwitch" class="lang-select">
+        <option value="ht">🇭🇹 Kreyòl</option>
+        <option value="fr">🇫🇷 Français</option>
+        <option value="en">🇺🇸 English</option>
+        <option value="es">🇪🇸 Español</option>
+      </select>
+
+      <button id="themeToggle" class="btn btn-outline btn-sm" type="button" title="Basculer thème">🌙</button>
+
+      <select id="currencySwitch" class="lang-select">
+        <option value="HTG">🇭🇹 HTG</option>
+        <option value="USD">🇺🇸 USD</option>
+        <option value="EUR">🇪🇺 EUR</option>
+      </select>
+
+      <div class="dropdown" id="menuDropdown">
+        <button id="menuBtn" class="btn-menu" aria-label="Menu"><i class="fas fa-bars"></i></button>
+        <div id="dropdownMenu" class="dropdown-content hidden">
+          <a href="#" id="menuHome">🏠 <span data-i18n="home">Akèy</span></a>
+          <a href="#" id="menuShop">🛍️ <span data-i18n="shop">Boutik</span></a>
+          <a href="#" id="menuFavorites">❤️ <span data-i18n="favorites">Favori</span></a>
+          <a href="#" id="menuAI">🤖 <span data-i18n="aiAssistant">Asistan IA</span></a>
+          <a href="#" id="menuSpecial">🎉 <span data-i18n="specialOffers">Òf espesyal</span></a>
+          <a href="#" id="menuHistory">📋 <span data-i18n="history">Istwa</span></a>
+          <a href="#" id="menuSettings">⚙️ <span data-i18n="settings">Paramèt</span></a>
+
+          <div class="menu-divider mobile-only"></div>
+
+          <div class="mobile-only">
+            <label>Lang / Langue</label>
+            <select id="langSwitchMobile" class="lang-select-mobile">
+              <option value="ht">🇭🇹 Kreyòl</option>
+              <option value="fr">🇫🇷 Français</option>
+              <option value="en">🇺🇸 English</option>
+              <option value="es">🇪🇸 Español</option>
+            </select>
+            <label>Lajan / Devise</label>
+            <select id="currencySwitchMobile" class="lang-select-mobile">
+              <option value="HTG">🇭🇹 HTG</option>
+              <option value="USD">🇺🇸 USD</option>
+              <option value="EUR">🇪🇺 EUR</option>
+            </select>
+          </div>
+
+          <div class="menu-divider"></div>
+          <a href="#" id="menuLogistics" class="admin-or-vendor-only hidden">🚚 <span data-i18n="logistics">Logistique</span></a>
+
+          <a href="#" id="linkServices">🛠️ <span data-i18n="servicesTitle">Sèvis</span></a>
+          <a href="#" id="linkPrivacy">🔒 <span data-i18n="privacyTitle">Konfidansyalite</span></a>
+          <a href="#" id="linkTerms">📜 <span data-i18n="termsTitle">Kondisyon</span></a>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Search & Filters -->
+  <div id="searchFilterBar" class="container hidden">
+    <div class="search-filter-bar">
+      <div class="search-container">
+        <input type="text" id="searchInput" class="search-input" placeholder="🔍 Rechercher un produit..."
+          data-i18n-placeholder="searchPlaceholder">
+        <button id="searchBtn" class="btn btn-gold">🔍</button>
+      </div>
+      <div class="filter-container">
+        <select id="categoryFilter" class="filter-select">
+          <option value="all" data-i18n="allCategories">Toutes catégories</option>
+          <option value="clothing" data-i18n="categoryClothingAccessories">👕 Vêtements & Accessoires</option>
+          <option value="school" data-i18n="categorySchoolOffice">🎓 École & Travail</option>
+          <option value="home" data-i18n="categoryHomePersonal">🏠 Maison & Personnel</option>
+          <option value="electronics" data-i18n="categoryElectronicsTech">📱 Électronique</option>
+        </select>
+        <input type="number" id="priceMin" class="price-input" placeholder="Min" data-i18n-placeholder="priceMin">
+        <input type="number" id="priceMax" class="price-input" placeholder="Max" data-i18n-placeholder="priceMax">
+        <select id="sortBy" class="filter-select">
+          <option value="date-desc" data-i18n="sortDateDesc">Plus récent</option>
+          <option value="date-asc" data-i18n="sortDateAsc">Plus ancien</option>
+          <option value="price-asc" data-i18n="sortPriceAsc">Prix: Bas → Haut</option>
+          <option value="price-desc" data-i18n="sortPriceDesc">Prix: Haut → Bas</option>
+          <option value="name-asc" data-i18n="sortNameAsc">Nom: A → Z</option>
+          <option value="name-desc" data-i18n="sortNameDesc">Nom: Z → A</option>
+        </select>
+        <button id="applyFiltersBtn" class="btn btn-gold btn-sm">🔍 <span
+            data-i18n="applyFilters">Filtrer</span></button>
+        <button id="resetFiltersBtn" class="btn btn-outline btn-sm">🔄 <span
+            data-i18n="resetFilters">Reset</span></button>
+        <div id="resultsCount" class="results-count"></div>
+      </div>
     </div>
   </div>
 
-  <div id="app" class="app">
-    <header class="site-header">
-      <div class="brand">
-        <div class="brand-logo">TL</div>
-        <div class="brand-text"><strong>Total</strong><span>Lakay</span></div>
-      </div>
-      <nav class="main-nav">
-        <button data-view="dashboard" class="nav-link nav-active">Home</button>
-        <button data-view="shop" class="nav-link">Boutik</button>
-        <button data-view="orders" class="nav-link user-only hidden">Kòmand</button>
-        <button data-view="admin" class="nav-link admin-only hidden">Admin</button>
-      </nav>
-      <div class="header-actions">
-        <div class="search-wrap"><input id="searchInput" placeholder="Rechèch pwodwi..." aria-label="Rechèch"></div>
-        <button id="authButton" class="btn">Konekte</button>
-        <button id="cartToggle" class="icon">🛒<span id="topCartBadge" class="badge hidden">0</span></button>
-      </div>
-    </header>
-
-    <main id="appContent" class="content">
+  <!-- Main Content -->
+  <main id="appContent" class="container view-fade-in">
       <!-- Hero cinematic with layers and carousel -->
       <section class="hero cinematic" id="hero">
         <div class="hero-layers">
@@ -66,53 +197,156 @@
               <img data-src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200&q=80&auto=format&fit=crop" alt="delivery" class="lazy media-item" />
               <img data-src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=1200&q=80&auto=format&fit=crop" alt="market" class="lazy media-item" />
             </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Featured gallery with 3D cards -->
-      <section class="featured section">
-        <h2 class="section-title">Koleksyon Nou Rekòmande</h2>
-        <div class="cards-grid" id="featuredGrid"></div>
-      </section>
-
-      <!-- Immersive product grid -->
-      <section class="products section">
-        <div class="section-head"><h2>Tout Pwodwi</h2><div class="filters"><select id="sortSelect"><option value="popular">Pi Popilè</option><option value="new">Dènye</option></select></div></div>
-        <div id="productGrid" class="product-grid"></div>
-      </section>
-
-      <!-- Cinematic footer area with parallax shapes -->
-      <footer class="site-footer">
-        <div class="footer-inner">
-          <div class="footer-brand">Total Lakay — Eksperyans Premium</div>
-          <nav class="footer-nav"><a href="#">About</a><a href="#">Kontak</a><a href="#">Tèm</a></nav>
-        </div>
-        <div class="footer-credit">© Total Lakay 2026</div>
-      </footer>
-    </main>
-
-    <!-- Modals and overlays -->
-    <div id="overlay" class="overlay hidden"></div>
-    <div id="authModal" class="modal hidden">
-      <div class="modal-panel">
-        <button class="modal-close" id="authModalClose">×</button>
-        <h3>Konekte</h3>
-        <form id="authForm">
-          <input id="authEmail" type="email" placeholder="Email">
-          <input id="authPassword" type="password" placeholder="Modpas">
-          <div class="form-actions"><button id="authSubmit" class="btn btn-primary">Konekte</button><button id="authGoogle" type="button" class="btn btn-ghost">Google</button></div>
-        </form>
+    <div class="hero-section">
+      <img src="logo.jpeg" alt="Total Lakay" class="hero-logo" onerror="this.style.display='none';">
+      <h1 class="hero-title">🏠 Byenveni nan Total Lakay</h1>
+      <p class="hero-subtitle">Tout bagay lakay ou nan yon sèl klike.</p>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:25px;">
+        <a href="#" onclick="renderView('shop'); return false;" class="btn btn-gold" style="padding:12px 22px;">🛒 Shop</a>
       </div>
     </div>
+  </main>
 
-    <aside id="cartDrawer" class="drawer hidden">
-      <div class="drawer-panel">
-        <header><h4>Panyen</h4><button id="closeCart">×</button></header>
-        <div id="cartItems" class="cart-items"></div>
-        <div class="drawer-actions"><div class="total">Total: <strong id="cartTotalAmount">0 HTG</strong></div><button id="checkoutButton" class="btn btn-primary">Peye</button></div>
+  <!-- LOGIN MODAL -->
+  <div id="loginModal" class="modal hidden">
+    <div class="login-card glass view-fade-in">
+      <span class="close-modal" id="closeLoginModal">&times;</span>
+
+      <div id="loginFormCard">
+        <div class="login-header">
+          <img src="logo.jpeg" alt="Total Lakay" class="login-logo"
+            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+          <div class="logo-icon-fallback">TL</div>
+          <h2 data-i18n="loginTitle">Konekte pou achte</h2>
+          <p data-i18n="welcome">Byenveni nan Total Lakay</p>
+        </div>
+
+        <button id="googleLoginBtn" class="btn-google">
+          🟢 <span data-i18n="continueGoogle">Kontinye ak Google</span>
+        </button>
+
+        <div class="separator"><span data-i18n="or">oubyen</span></div>
+
+        <input type="email" id="loginEmail" placeholder="Email" data-i18n-placeholder="emailPlaceholder">
+        <input type="password" id="loginPassword" placeholder="Modpas" data-i18n-placeholder="passwordPlaceholder">
+
+        <button id="emailLoginBtn" class="btn btn-gold" style="width:100%; margin-top:0.5rem;">🔐 <span
+            data-i18n="login">Konekte</span></button>
+
+        <a href="#" id="forgotPasswordLink" style="display: block; margin-top: 12px; font-size: 0.85rem; color: var(--gold); font-weight: 600; text-decoration: none; text-align: center;" data-i18n="forgotPassword">Mot de passe oublié ?</a>
+
+        <div class="login-switch">
+          <span data-i18n="noAccount">Pa gen kont?</span> <a href="#" id="switchToRegister"
+            data-i18n="createAccount">Kreye yon kont</a>
+        </div>
       </div>
-    </aside>
+
+      <div id="registerForm" class="hidden">
+        <div class="login-header">
+          <h2 data-i18n="createAccountTitle">Kreye kont ou</h2>
+        </div>
+
+        <input type="text" id="registerName" placeholder="Non ou" data-i18n-placeholder="namePlaceholder">
+        <input type="email" id="registerEmail" placeholder="Email" data-i18n-placeholder="emailPlaceholder">
+        <input type="password" id="registerPassword" placeholder="Modpas (min 6 karaktè)"
+          data-i18n-placeholder="passwordMin">
+
+        <button id="registerBtn" class="btn btn-gold" style="width:100%;">✅ <span data-i18n="createAccount">Kreye
+            kont</span></button>
+
+        <div class="login-switch">
+          <span data-i18n="alreadyAccount">Deja gen yon kont?</span> <a href="#" id="switchToLogin"
+            data-i18n="login">Konekte</a>
+        </div>
+      </div>
+    </div>
   </div>
+
+  <!-- CART MODAL -->
+  <div id="cartModal" class="modal hidden">
+    <div class="modal-content">
+      <span class="close-modal" id="closeCartModal">&times;</span>
+      <h2 class="text-center">🛒 <span data-i18n="cart">Panyen</span></h2>
+      <div id="cartItemsList" class="cart-items-list"></div>
+      <div class="cart-summary">
+        <div class="cart-total">
+          <span data-i18n="total">Total</span>
+          <span id="cartTotalAmount">0 HTG</span>
+        </div>
+        <button id="checkoutBtn" class="btn btn-gold" style="width:100%;">💳 <span data-i18n="checkout">Peye kounye a</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTIFICATIONS MODAL -->
+  <div id="notifModal" class="modal hidden">
+    <div class="modal-content card-premium" style="max-width:420px;">
+      <span class="close-modal" id="closeNotifModal">&times;</span>
+      <h2>🔔 <span data-i18n="notifications">Notifikasyon</span></h2>
+      <div id="notifList" style="max-height:400px; overflow-y:auto;">
+        <p class="text-center" style="padding:2rem;">📭 <span data-i18n="noNotifications">Pa gen notifikasyon</span></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:50px; margin-bottom:60px;">
+        <div class="footer-brand">
+          <h2 style="color:white; margin:0 0 20px; letter-spacing:1px;">TOTAL LAKAY</h2>
+          <p data-i18n="footerSlogan" style="opacity:0.7; line-height:1.8; font-size:0.95rem;">Pi gwo boutik an liy an Ayiti.</p>
+        </div>
+
+        <div>
+          <h3 style="color:var(--gold); margin-bottom:25px;">LIEN RAPID</h3>
+          <div style="display:flex; flex-direction:column; gap:15px;">
+            <a href="#" onclick="renderView('shop')" style="color:white; opacity:0.8; text-decoration:none;">Boutik</a>
+            <a href="#" onclick="renderView('specialOffers')" style="color:white; opacity:0.8; text-decoration:none;">Pwomosyon</a>
+          </div>
+        </div>
+
+        <div>
+          <h3 style="color:var(--gold); margin-bottom:25px;">KONTAKT</h3>
+          <div style="display:flex; flex-direction:column; gap:15px; opacity:0.8;">
+            <div>📞 +509 3882-4664</div>
+            <div>📧 totallakayst@gmail.com</div>
+            <div>📍 Pòtoprens, Ayiti</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding-top:40px; border-top:1px solid rgba(255,255,255,0.1); text-align:center; font-size:0.9rem; opacity:0.6;">
+        <p>Total Lakay © 2026. Tout dwa rezève.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- WhatsApp Float -->
+  <a href="https://wa.me/50938824664" target="_blank" class="whatsapp-float" aria-label="Chat WhatsApp">
+    💬
+  </a>
+
+  <!-- AI Bubble -->
+  <button id="aiBubble" class="ai-bubble" onclick="toggleChatbot()">🤖</button>
+
+  <!-- Side Drawer (Cart) -->
+  <div id="drawerOverlay" class="drawer-overlay" onclick="toggleCartDrawer()"></div>
+  <aside id="cartDrawer" class="drawer">
+    <div class="drawer-header">
+      <h2 style="margin:0; font-size: 1.4rem;"><span data-i18n="cart">Panyen</span> 🛒</h2>
+      <button class="btn-menu" onclick="toggleCartDrawer()" style="background: var(--gray-100); color: var(--text-main);">✕</button>
+    </div>
+    <div id="drawerContent" class="drawer-content"></div>
+    <div id="drawerFooter" class="drawer-footer hidden">
+      <div style="display:flex; justify-content:space-between; margin-bottom:20px; font-weight:800; font-size:1.2rem;">
+        <span data-i18n="total">Total</span>
+        <span id="drawerTotal">0 HTG</span>
+      </div>
+      <button onclick="toggleCartDrawer(); renderView('checkout');" class="btn btn-gold" style="width:100%; padding:15px;">Peye kounye a</button>
+    </div>
+  </aside>
+
 </body>
+
 </html>

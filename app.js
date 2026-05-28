@@ -1,5 +1,5 @@
 /* ============================================
-   Total Lakay — Frontend SPA Rebuild
+   Total Lakay — Complete Frontend App
    ============================================ */
 
 const firebaseConfig = {
@@ -12,738 +12,488 @@ const firebaseConfig = {
   measurementId: "G-HC09M5HTVZ"
 };
 
+// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+// State Management
 const state = {
-  currentView: 'dashboard',
   currentUser: null,
   userRole: 'client',
   theme: localStorage.getItem('tl_theme') || 'light',
   currency: localStorage.getItem('tl_currency') || 'HTG',
   cart: JSON.parse(localStorage.getItem('tl_cart') || '[]'),
   products: [],
-  orders: [],
-  notifications: [],
-  dashboardLoaded: false,
-  viewCache: {},
+  language: localStorage.getItem('tl_language') || 'ht'
 };
 
-const views = {
-  dashboard: renderDashboard,
-  shop: renderShop,
-  orders: renderOrders,
-  notifications: renderNotifications,
-  profile: renderProfile,
-  admin: renderAdmin,
-  logistics: renderLogistics,
+// Translations
+const translations = {
+  ht: {
+    home: 'Akèy',
+    shop: 'Boutik',
+    cart: 'Panyen',
+    login: 'Konekte',
+    logout: 'Dekonekte',
+    noNotifications: 'Pa gen notifikasyon'
+  },
+  fr: {
+    home: 'Accueil',
+    shop: 'Boutique',
+    cart: 'Panier',
+    login: 'Connexion',
+    logout: 'Déconnexion',
+    noNotifications: 'Pas de notifications'
+  },
+  en: {
+    home: 'Home',
+    shop: 'Shop',
+    cart: 'Cart',
+    login: 'Login',
+    logout: 'Logout',
+    noNotifications: 'No notifications'
+  }
 };
 
-const elements = {};
-
-function $(selector) {
-  return document.querySelector(selector);
-}
-
-function $all(selector) {
-  return Array.from(document.querySelectorAll(selector));
-}
-
+// Initialize app
 function init() {
-  elements.appContent = $('#appContent');
-  elements.authModal = $('#authModal');
-  elements.cartDrawer = $('#cartDrawer');
-  elements.overlay = $('#overlay');
-  elements.toastContainer = $('#toastContainer');
-  elements.authButton = $('#authButton');
-  elements.logoutButton = $('#logoutButton');
-  elements.searchInput = $('#searchInput');
-  elements.searchSubmit = $('#searchSubmit');
-  elements.themeToggle = $('#themeToggle');
-  elements.topNotifBadge = $('#topNotifBadge');
-  elements.topCartBadge = $('#topCartBadge');
-  elements.notifToggle = $('#notifToggle');
-  elements.cartToggle = $('#cartToggle');
-  elements.checkoutButton = $('#checkoutButton');
-  elements.cartItems = $('#cartItems');
-  elements.cartTotalAmount = $('#cartTotalAmount');
-  elements.sidebarOpen = $('#sidebarOpen');
-  elements.sidebarToggle = $('#sidebarToggle');
-  elements.authModalClose = $('#authModalClose');
-  elements.authForm = $('#authForm');
-
   applyTheme(state.theme);
-  updateAuthUI();
-  attachListeners();
-  hydrateCart();
+  setupEventListeners();
   initAuth();
-  applyRouteFromHash();
+  loadProducts();
+  renderHome();
 }
 
-function attachListeners() {
-  document.body.addEventListener('click', handleGlobalClick);
-  elements.themeToggle.addEventListener('click', handleThemeToggle);
-  elements.searchSubmit.addEventListener('click', handleSearchSubmit);
-  elements.searchInput.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      handleSearchSubmit();
+function setupEventListeners() {
+  // Auth buttons
+  const authBtn = document.getElementById('authBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const closeLoginModal = document.getElementById('closeLoginModal');
+  
+  if (authBtn) authBtn.addEventListener('click', () => openLoginModal());
+  if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
+  if (closeLoginModal) closeLoginModal.addEventListener('click', () => closeLoginModal.parentElement.classList.add('hidden'));
+  
+  // Theme toggle
+  const themeToggle = document.getElementById('themeToggle');
+  if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
+  
+  // Language & Currency
+  const langSwitch = document.getElementById('langSwitch');
+  const currencySwitch = document.getElementById('currencySwitch');
+  
+  if (langSwitch) langSwitch.addEventListener('change', (e) => {
+    state.language = e.target.value;
+    localStorage.setItem('tl_language', state.language);
+    updateTranslations();
+  });
+  
+  if (currencySwitch) currencySwitch.addEventListener('change', (e) => {
+    state.currency = e.target.value;
+    localStorage.setItem('tl_currency', state.currency);
+  });
+  
+  // Login form
+  const emailLoginBtn = document.getElementById('emailLoginBtn');
+  const googleLoginBtn = document.getElementById('googleLoginBtn');
+  
+  if (emailLoginBtn) emailLoginBtn.addEventListener('click', handleEmailLogin);
+  if (googleLoginBtn) googleLoginBtn.addEventListener('click', handleGoogleLogin);
+  
+  // Register
+  const registerBtn = document.getElementById('registerBtn');
+  const switchToRegister = document.getElementById('switchToRegister');
+  const switchToLogin = document.getElementById('switchToLogin');
+  
+  if (registerBtn) registerBtn.addEventListener('click', handleRegister);
+  if (switchToRegister) switchToRegister.addEventListener('click', (e) => {
+    e.preventDefault();
+    document.getElementById('loginFormCard').classList.add('hidden');
+    document.getElementById('registerForm').classList.remove('hidden');
+  });
+  if (switchToLogin) switchToLogin.addEventListener('click', (e) => {
+    e.preventDefault();
+    document.getElementById('loginFormCard').classList.remove('hidden');
+    document.getElementById('registerForm').classList.add('hidden');
+  });
+  
+  // Navigation
+  const navShop = document.getElementById('navShop');
+  if (navShop) navShop.addEventListener('click', renderShop);
+  
+  // Cart
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('.close-modal') && e.target.closest('#loginModal')) {
+      document.getElementById('loginModal').classList.add('hidden');
     }
   });
-  elements.authButton.addEventListener('click', openAuthModal);
-  elements.logoutButton.addEventListener('click', handleLogout);
-  elements.authModalClose.addEventListener('click', () => closeModal(elements.authModal));
-  elements.authForm?.addEventListener('submit', handleAuthSubmit);
-  $('#authGoogle')?.addEventListener('click', signInWithGoogle);
-  $('#switchRegister')?.addEventListener('click', openRegisterMode);
-  elements.cartToggle.addEventListener('click', openCartDrawer);
-  $('#closeCart').addEventListener('click', closeCartDrawer);
-  elements.checkoutButton.addEventListener('click', handleCheckout);
-  elements.overlay.addEventListener('click', closeActivePanels);
-  elements.sidebarOpen.addEventListener('click', () => document.body.classList.toggle('sidebar-open'));
-  elements.sidebarToggle.addEventListener('click', () => document.body.classList.toggle('sidebar-open'));
-  $all('[data-view]').forEach((button) => {
-    button.addEventListener('click', (event) => {
-      const view = event.currentTarget.dataset.view;
-      if (view) navigate(view);
+  
+  // Menu dropdown
+  const menuBtn = document.getElementById('menuBtn');
+  const dropdownMenu = document.getElementById('dropdownMenu');
+  
+  if (menuBtn) {
+    menuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdownMenu.classList.toggle('hidden');
     });
-  });
-  // Product detail handler (delegated)
-  elements.appContent.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-detail]');
-    if (btn) {
-      const id = btn.dataset.detail;
-      openProductDetail(id);
+  }
+  
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.dropdown') && dropdownMenu) {
+      dropdownMenu.classList.add('hidden');
     }
   });
-  window.addEventListener('hashchange', applyRouteFromHash);
 }
 
-function handleGlobalClick(event) {
-  const target = event.target;
-  if (target.closest('.toast-close')) {
-    target.closest('.toast')?.remove();
-  }
-}
-
-function applyRouteFromHash() {
-  const hash = window.location.hash.replace('#', '');
-  const view = hash || state.currentView;
-  navigate(view, false);
-}
-
-function navigate(view, pushState = true) {
-  const route = views[view] ? view : 'dashboard';
-  if (route === state.currentView && elements.appContent.innerHTML.trim() !== '') {
-    return;
-  }
-  state.currentView = route;
-  updateActiveNav();
-  if (pushState) {
-    window.history.pushState({}, '', `#${route}`);
-  }
-  renderCurrentView();
-}
-
-function updateActiveNav() {
-  $all('.nav-link').forEach((button) => {
-    button.classList.toggle('nav-active', button.dataset.view === state.currentView);
-  });
-}
-
-function setLoading(message = 'Chajman...') {
-  if (!elements.appContent) return;
-  elements.appContent.innerHTML = `<section class="card"><div class="card-header"><h2>${message}</h2></div><div class="card-body"><div class="skeleton-grid"><div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div></div></div></section>`;
-}
-
-function renderCurrentView() {
-  if (!views[state.currentView]) {
-    state.currentView = 'dashboard';
-  }
-  views[state.currentView]();
-}
-
-function openPanel(panel) {
-  panel.classList.remove('hidden');
-  elements.overlay.classList.remove('hidden');
-}
-
-function closePanel(panel) {
-  panel.classList.add('hidden');
-  elements.overlay.classList.add('hidden');
-}
-
-function closeActivePanels() {
-  if (!elements.overlay.classList.contains('hidden')) {
-    closeModal(elements.authModal);
-    closeCartDrawer();
-    document.body.classList.remove('sidebar-open');
-  }
-}
-
-function openAuthModal() {
-  openPanel(elements.authModal);
-}
-
-function closeModal(modal) {
-  modal.classList.add('hidden');
-  elements.overlay.classList.add('hidden');
-}
-
-function openCartDrawer() {
-  elements.cartDrawer.classList.add('open');
-  elements.cartDrawer.classList.remove('hidden');
-  elements.overlay.classList.remove('hidden');
-}
-
-function closeCartDrawer() {
-  elements.cartDrawer.classList.remove('open');
-  elements.cartDrawer.classList.add('hidden');
-  elements.overlay.classList.add('hidden');
-}
-
-function handleThemeToggle() {
-  const newTheme = state.theme === 'dark' ? 'light' : 'dark';
-  applyTheme(newTheme);
-}
-
-function applyTheme(theme) {
-  state.theme = theme;
-  document.documentElement.dataset.theme = theme;
-  localStorage.setItem('tl_theme', theme);
-}
-
-function handleSearchSubmit() {
-  const term = elements.searchInput.value.trim().toLowerCase();
-  state.searchTerm = term;
-  if (state.currentView === 'shop') {
-    renderShop();
-  } else {
-    navigate('shop');
-  }
-}
-
-function handleAuthSubmit(event) {
-  event.preventDefault();
-  const mode = $('#authForm').dataset.mode || 'login';
-  const email = $('#authEmail').value.trim();
-  const password = $('#authPassword').value.trim();
-  if (!email || !password) {
-    showToast('Ranpli email ak modpas pou kontinye.', 'error');
-    return;
-  }
-  if (mode === 'register') {
-    createAccountWithEmail(email, password);
-  } else {
-    signInWithEmail(email, password);
-  }
-}
-
-function openRegisterMode() {
-  $('#authSubmit').textContent = 'Kreye kont';
-  $('#authForm').dataset.mode = 'register';
-}
-
-async function createAccountWithEmail(email, password) {
-  try {
-    showToast('Kreye kont ou...', 'success');
-    const result = await auth.createUserWithEmailAndPassword(email, password);
-    if (result.user) {
-      showToast('Kont kreye avèk siksè.', 'success');
-      closeModal(elements.authModal);
-    }
-  } catch (error) {
-    showToast(error.message || 'Erè pandan kreye kont.', 'error');
-  }
-}
-
-async function signInWithEmail(email, password) {
-  try {
-    showToast('Ap konekte...', 'success');
-    const result = await auth.signInWithEmailAndPassword(email, password);
-    if (result.user) {
-      showToast('Konekte avèk siksè.', 'success');
-      closeModal(elements.authModal);
-    }
-  } catch (error) {
-    showToast(error.message || 'Erè koneksyon.', 'error');
-  }
-}
-
-async function signInWithGoogle() {
-  try {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    await auth.signInWithPopup(provider);
-    showToast('Konekte avèk Google.', 'success');
-    closeModal(elements.authModal);
-  } catch (error) {
-    showToast(error.message || 'Erè Google Connect.', 'error');
-  }
-}
-
-async function handleLogout() {
-  await auth.signOut();
-  showToast('Ou dekonekte avèk siksè.', 'success');
-  state.userRole = 'client';
-  updateAuthUI();
-  navigate('dashboard');
-}
-
-function hydrateCart() {
-  state.cart = Array.isArray(state.cart) ? state.cart : [];
-  saveCart();
-  updateCartBadge();
-}
-
-function saveCart() {
-  localStorage.setItem('tl_cart', JSON.stringify(state.cart));
-  updateCartBadge();
-}
-
-function addToCart(product) {
-  const existing = state.cart.find((item) => item.id === product.id);
-  if (existing) {
-    existing.quantity += 1;
-  } else {
-    state.cart.push({ ...product, quantity: 1 });
-  }
-  saveCart();
-  showToast('Pwodui ajoute nan panyen.', 'success');
-}
-
-function removeFromCart(productId) {
-  state.cart = state.cart.filter((item) => item.id !== productId);
-  saveCart();
-  renderCart();
-}
-
-function updateCartBadge() {
-  const count = state.cart.reduce((sum, item) => sum + item.quantity, 0);
-  elements.topCartBadge.textContent = count;
-  elements.topCartBadge.classList.toggle('hidden', count === 0);
-}
-
-async function initAuth() {
-  auth.onAuthStateChanged(async (user) => {
+function initAuth() {
+  auth.onAuthStateChanged((user) => {
     state.currentUser = user;
-    if (user) {
-      await loadUserRole(user);
-      showToast(`Byenveni ${user.email || 'retou'}.`, 'success');
-    } else {
-      state.userRole = 'client';
-    }
     updateAuthUI();
-    renderCurrentView();
+    updateUserOnlyElements();
   });
-}
-
-async function loadUserRole(user) {
-  try {
-    const profile = await db.collection('users').doc(user.uid).get();
-    const data = profile.exists ? profile.data() : null;
-    state.userRole = data?.role || 'client';
-  } catch (error) {
-    console.error('loadUserRole', error);
-    state.userRole = 'client';
-  }
 }
 
 function updateAuthUI() {
-  const loggedIn = !!state.currentUser;
-  elements.authButton.classList.toggle('hidden', loggedIn);
-  elements.logoutButton.classList.toggle('hidden', !loggedIn);
-  $all('.user-only').forEach((el) => el.classList.toggle('hidden', !loggedIn));
-  $all('.admin-only').forEach((el) => el.classList.toggle('hidden', state.userRole !== 'admin'));
-  $all('.vendor-only').forEach((el) => el.classList.toggle('hidden', state.userRole !== 'vendor'));
+  const authBtn = document.getElementById('authBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  
+  if (state.currentUser) {
+    if (authBtn) authBtn.classList.add('hidden');
+    if (logoutBtn) logoutBtn.classList.remove('hidden');
+  } else {
+    if (authBtn) authBtn.classList.remove('hidden');
+    if (logoutBtn) logoutBtn.classList.add('hidden');
+  }
 }
 
-function showToast(message, type = 'success') {
-  const toast = document.createElement('article');
-  toast.className = `toast ${type}`;
-  toast.innerHTML = `<strong>${message}</strong><button class="toast-close">×</button>`;
-  elements.toastContainer.appendChild(toast);
-  setTimeout(() => toast.remove(), 4200);
-}
-
-function renderDashboard() {
-  setLoading('Chajman tablodbò...');
-  Promise.all([fetchProducts(), fetchOrders(), fetchNotifications()]).then(() => {
-    const productCount = state.products.length;
-    const orderCount = state.orders.length;
-    const revenue = state.orders.reduce((total, order) => total + (order.total || 0), 0);
-    const recentProducts = state.products.slice(0, 4);
-    const recentOrders = state.orders.slice(0, 5);
-
-    elements.appContent.innerHTML = `
-      <section class="section-grid">
-        <section class="card">
-          <div class="card-header"><h2>Rezime rapid</h2></div>
-          <div class="card-body stats-grid">
-            <article class="stat-card"><span>Total pwodwi</span><strong>${productCount}</strong></article>
-            <article class="stat-card"><span>Total kòmand</span><strong>${orderCount}</strong></article>
-            <article class="stat-card"><span>Revni estime</span><strong>${formatMoney(revenue)}</strong></article>
-          </div>
-        </section>
-
-        <section class="card">
-          <div class="card-header"><h2>Analytics</h2></div>
-          <div class="card-body"><canvas id="salesChart" width="400" height="200"></canvas></div>
-        </section>
-      </section>
-
-      <section class="section-grid">
-        <section class="card">
-          <div class="card-header"><h2>Pwodui rekòmande</h2></div>
-          <div class="card-body product-grid">
-            ${recentProducts.map(renderProductCardMinimal).join('')}
-          </div>
-        </section>
-
-        <section class="card">
-          <div class="card-header"><h2>Dènye kòmand</h2></div>
-          <div class="card-body">
-            ${recentOrders.length ? renderOrdersTable(recentOrders) : '<p class="muted">Pa gen kòmand resan.</p>'}
-          </div>
-        </section>
-      </section>
-    `;
-
-    renderSalesChart(revenue, orderCount);
-  }).catch((error) => {
-    console.error(error);
-    elements.appContent.innerHTML = `<section class="card"><div class="card-header"><h2>Erè</h2></div><div class="card-body"><p class="muted">Nou pa ka chaje tablodbò la kounye a.</p></div></section>`;
+function updateUserOnlyElements() {
+  const userOnlyElements = document.querySelectorAll('.user-only');
+  userOnlyElements.forEach(el => {
+    if (state.currentUser) {
+      el.classList.remove('hidden');
+    } else {
+      el.classList.add('hidden');
+    }
   });
+}
+
+function openLoginModal() {
+  document.getElementById('loginModal').classList.remove('hidden');
+}
+
+function handleEmailLogin() {
+  const email = document.getElementById('loginEmail').value;
+  const password = document.getElementById('loginPassword').value;
+  
+  if (!email || !password) {
+    alert('Veyifye email ak modpas');
+    return;
+  }
+  
+  auth.signInWithEmailAndPassword(email, password)
+    .then(() => {
+      document.getElementById('loginModal').classList.add('hidden');
+      document.getElementById('loginEmail').value = '';
+      document.getElementById('loginPassword').value = '';
+    })
+    .catch(error => {
+      alert('Erè: ' + error.message);
+    });
+}
+
+function handleGoogleLogin() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider)
+    .then(() => {
+      document.getElementById('loginModal').classList.add('hidden');
+    })
+    .catch(error => {
+      alert('Erè: ' + error.message);
+    });
+}
+
+function handleRegister() {
+  const name = document.getElementById('registerName').value;
+  const email = document.getElementById('registerEmail').value;
+  const password = document.getElementById('registerPassword').value;
+  
+  if (!name || !email || !password || password.length < 6) {
+    alert('Veyifye tou info yo. Modpas min 6 karaktè');
+    return;
+  }
+  
+  auth.createUserWithEmailAndPassword(email, password)
+    .then((userCredential) => {
+      return userCredential.user.updateProfile({
+        displayName: name
+      });
+    })
+    .then(() => {
+      document.getElementById('loginModal').classList.add('hidden');
+      document.getElementById('registerName').value = '';
+      document.getElementById('registerEmail').value = '';
+      document.getElementById('registerPassword').value = '';
+      document.getElementById('loginFormCard').classList.remove('hidden');
+      document.getElementById('registerForm').classList.add('hidden');
+      alert('Kont kreye avèk siksè!');
+    })
+    .catch(error => {
+      alert('Erè: ' + error.message);
+    });
+}
+
+function handleLogout() {
+  auth.signOut()
+    .then(() => {
+      state.currentUser = null;
+      updateAuthUI();
+      updateUserOnlyElements();
+      renderHome();
+    })
+    .catch(error => {
+      alert('Erè: ' + error.message);
+    });
+}
+
+function toggleTheme() {
+  state.theme = state.theme === 'light' ? 'dark' : 'light';
+  localStorage.setItem('tl_theme', state.theme);
+  applyTheme(state.theme);
+}
+
+function applyTheme(theme) {
+  if (theme === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+  }
+}
+
+function updateTranslations() {
+  // Simple i18n implementation
+  const elements = document.querySelectorAll('[data-i18n]');
+  const lang = state.language;
+  
+  elements.forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (translations[lang] && translations[lang][key]) {
+      el.textContent = translations[lang][key];
+    }
+  });
+}
+
+function renderHome() {
+  const appContent = document.getElementById('appContent');
+  appContent.innerHTML = `
+    <div class="hero-section">
+      <img src="logo.jpeg" alt="Total Lakay" class="hero-logo" onerror="this.style.display='none';">
+      <h1 class="hero-title">🏠 Byenveni nan Total Lakay</h1>
+      <p class="hero-subtitle">Tout bagay lakay ou nan yon sèl klike.</p>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:25px;">
+        <button onclick="renderShop()" class="btn btn-gold" style="padding:12px 22px;">🛒 Ale nan Boutik</button>
+      </div>
+    </div>
+  `;
+}
+
+function loadProducts() {
+  // Simulated products
+  state.products = [
+    {
+      id: 1,
+      name: 'Telefòn Smart 5G',
+      price: 2500,
+      currency: 'HTG',
+      image: 'https://via.placeholder.com/300x200?text=Phone',
+      category: 'electronics',
+      description: 'Telefòn dwèt dernye teknoloji'
+    },
+    {
+      id: 2,
+      name: 'Rad Entèn',
+      price: 350,
+      currency: 'HTG',
+      image: 'https://via.placeholder.com/300x200?text=Shirt',
+      category: 'clothing',
+      description: 'Rad kalite bon'
+    },
+    {
+      id: 3,
+      name: 'Liv Edukasyon',
+      price: 450,
+      currency: 'HTG',
+      image: 'https://via.placeholder.com/300x200?text=Book',
+      category: 'school',
+      description: 'Liv ak kont pratik'
+    },
+    {
+      id: 4,
+      name: 'Frije',
+      price: 8500,
+      currency: 'HTG',
+      image: 'https://via.placeholder.com/300x200?text=Fridge',
+      category: 'home',
+      description: 'Frije kalite ekselan'
+    }
+  ];
 }
 
 function renderShop() {
-  setLoading('Chajman boutik...');
-  fetchProducts().then(() => {
-    const filter = state.searchTerm || '';
-    const filtered = state.products.filter((product) => product.name.toLowerCase().includes(filter) || product.category.toLowerCase().includes(filter));
-    elements.appContent.innerHTML = `
-      <section class="card">
-        <div class="card-header"><h2>Boutik</h2></div>
-        <div class="card-body product-grid">
-          ${filtered.length ? filtered.map(renderProductCardFull).join('') : '<p class="muted">Pa gen rezilta pou rechèch la.</p>'}
+  const appContent = document.getElementById('appContent');
+  document.getElementById('searchFilterBar').classList.remove('hidden');
+  
+  let html = '<div class="grid">';
+  
+  state.products.forEach(product => {
+    html += `
+      <div class="product-card">
+        <div class="product-img-container">
+          <img src="${product.image}" alt="${product.name}" class="product-img" onerror="this.src='https://via.placeholder.com/300x200?text=${encodeURIComponent(product.name)}'">
         </div>
-      </section>
-    `;
-    attachProductActions();
-  }).catch((error) => {
-    console.error(error);
-    elements.appContent.innerHTML = `<section class="card"><div class="card-header"><h2>Erè boutik</h2></div><div class="card-body"><p class="muted">Nou pa ka chaje pwodwi yo kounye a.</p></div></section>`;
-  });
-}
-
-function renderOrders() {
-  if (!state.currentUser) {
-    elements.appContent.innerHTML = `<section class="card"><div class="card-header"><h2>Aksè restrenn</h2></div><div class="card-body"><p class="muted">Ou dwe konekte pou wè kòmand ou yo.</p></div></section>`;
-    return;
-  }
-  setLoading('Chajman kòmand...');
-  fetchOrders().then(() => {
-    elements.appContent.innerHTML = `
-      <section class="card">
-        <div class="card-header"><h2>Kòmand mwen yo</h2></div>
-        <div class="card-body">${state.orders.length ? renderOrdersTable(state.orders) : '<p class="muted">Pa gen kòmand pou kounye a.</p>'}</div>
-      </section>
-    `;
-  }).catch((error) => {
-    console.error(error);
-    elements.appContent.innerHTML = `<section class="card"><div class="card-header"><h2>Erè</h2></div><div class="card-body"><p class="muted">Nou pa ka chaje kòmand yo.</p></div></section>`;
-  });
-}
-
-function renderNotifications() {
-  setLoading('Chajman notifikasyon...');
-  fetchNotifications().then(() => {
-    elements.appContent.innerHTML = `
-      <section class="card">
-        <div class="card-header"><h2>Notifikasyon</h2></div>
-        <div class="card-body notification-list">
-          ${state.notifications.length ? state.notifications.map(renderNotificationItem).join('') : '<p class="muted">Pa gen notifikasyon pou kounye a.</p>'}
-        </div>
-      </section>
-    `;
-  });
-}
-
-function renderProfile() {
-  if (!state.currentUser) {
-    elements.appContent.innerHTML = `<section class="card"><div class="card-header"><h2>Profil</h2></div><div class="card-body"><p class="muted">Ou dwe konekte pou wè enfòmasyon kont ou.</p></div></section>`;
-    return;
-  }
-  elements.appContent.innerHTML = `
-    <section class="card">
-      <div class="card-header"><h2>Profil mwen</h2></div>
-      <div class="card-body">
-        <div class="section-grid">
-          <div class="card-body">
-            <p><strong>Email:</strong> ${state.currentUser.email}</p>
-            <p><strong>Wòl:</strong> ${state.userRole}</p>
-            <p><strong>UID:</strong> ${state.currentUser.uid}</p>
+        <div class="product-info">
+          <span class="product-category">${product.category}</span>
+          <h3 class="product-title">${product.name}</h3>
+          <div class="product-price-row">
+            <span class="product-price">${product.price} ${product.currency}</span>
           </div>
-          <div class="card-body">
-            <p>Jere preferans ou, verifye imel ou, epi kontwole sekirite kont lan.</p>
-          </div>
+          <button class="btn btn-gold" onclick="addToCart(${product.id})" style="width: 100%; margin-top: auto;">
+            🛒 Ajoute
+          </button>
         </div>
       </div>
-    </section>
-  `;
-}
-
-function renderAdmin() {
-  if (state.userRole !== 'admin') {
-    elements.appContent.innerHTML = `<section class="card"><div class="card-header"><h2>Aksè admin</h2></div><div class="card-body"><p class="muted">Ou pa gen dwa admin pou aksede seksyon sa a.</p></div></section>`;
-    return;
-  }
-  setLoading('Chajman admin...');
-  Promise.all([fetchProducts(), fetchOrders()]).then(() => {
-    const pending = state.orders.filter((order) => order.status === 'pending').length;
-    elements.appContent.innerHTML = `
-      <section class="section-grid">
-        <section class="card">
-          <div class="card-header"><h2>Admin Panel</h2></div>
-          <div class="card-body stats-grid">
-            <article class="stat-card"><span>Pwodui total</span><strong>${state.products.length}</strong></article>
-            <article class="stat-card"><span>Kòmand total</span><strong>${state.orders.length}</strong></article>
-            <article class="stat-card"><span>Kòmand ann atant</span><strong>${pending}</strong></article>
-          </div>
-        </section>
-      </section>
     `;
   });
+  
+  html += '</div>';
+  appContent.innerHTML = html;
 }
 
-function renderLogistics() {
-  if (state.userRole !== 'vendor') {
-    elements.appContent.innerHTML = `<section class="card"><div class="card-header"><h2>Lojistik</h2></div><div class="card-body"><p class="muted">Seksyon sa a disponib sèlman pou livrezon.</p></div></section>`;
-    return;
-  }
-  setLoading('Chajman lojistik...');
-  fetchOrders().then(() => {
-    const deliveries = state.orders.filter((order) => order.status !== 'delivered');
-    elements.appContent.innerHTML = `
-      <section class="card">
-        <div class="card-header"><h2>Livrezon an tan reyèl</h2></div>
-        <div class="card-body">
-          ${deliveries.length ? renderOrdersTable(deliveries) : '<p class="muted">Pa gen livrezon aktif pou kounye a.</p>'}
-        </div>
-      </section>
-    `;
-  });
-}
-
-function renderProductCardMinimal(product) {
-  return `
-    <article class="product-card">
-      <div class="product-image">${escapeHtml(product.name)}</div>
-      <div class="product-body">
-        <div class="product-category">${escapeHtml(product.category || 'Kategori')}</div>
-        <h3 class="product-title">${escapeHtml(product.name)}</h3>
-        <div class="product-footer">
-          <span class="product-price">${formatMoney(product.price)}</span>
-          <button class="btn btn-outline" data-add="${product.id}">Achte</button>
-        </div>
-      </div>
-    </article>
-  `;
-}
-
-function renderProductCardFull(product) {
-  return `
-    <article class="product-card">
-      <div class="product-image">${escapeHtml(product.name)}</div>
-      <div class="product-body">
-        <div class="product-category">${escapeHtml(product.category || 'Kategori')}</div>
-        <h3 class="product-title">${escapeHtml(product.name)}</h3>
-        <p class="muted">${escapeHtml(product.description || 'Pa gen deskripsyon.')}</p>
-        <div class="product-footer">
-          <strong class="product-price">${formatMoney(product.price)}</strong>
-          <div class="product-actions">
-            <button class="btn btn-gold" data-add="${product.id}">Achte</button>
-          </div>
-        </div>
-      </div>
-    </article>
-  `;
-}
-
-function renderOrdersTable(orders) {
-  return `
-    <table class="table">
-      <thead>
-        <tr><th>ID</th><th>Kliyan</th><th>Pri</th><th>Estati</th></tr>
-      </thead>
-      <tbody>
-        ${orders.map((order) => `
-          <tr>
-            <td>${escapeHtml(order.id || '—')}</td>
-            <td>${escapeHtml(order.customerName || order.email || '—')}</td>
-            <td>${formatMoney(order.total || 0)}</td>
-            <td>${escapeHtml(order.status || '—')}</td>
-          </tr>
-        `).join('')}
-      </tbody>
-    </table>
-  `;
-}
-
-function renderNotificationItem(notification) {
-  return `
-    <article class="notification-item">
-      <strong>${escapeHtml(notification.title)}</strong>
-      <p>${escapeHtml(notification.message)}</p>
-      <small>${new Date(notification.createdAt || Date.now()).toLocaleString()}</small>
-    </article>
-  `;
-}
-
-function attachProductActions() {
-  elements.appContent.querySelectorAll('[data-add]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const productId = button.dataset.add;
-      const product = state.products.find((item) => item.id === productId);
-      if (!product) return;
-      addToCart(product);
-      animateAddToCart(button, product);
+function addToCart(productId) {
+  const product = state.products.find(p => p.id === productId);
+  if (!product) return;
+  
+  const existingItem = state.cart.find(item => item.id === productId);
+  
+  if (existingItem) {
+    existingItem.quantity = (existingItem.quantity || 1) + 1;
+  } else {
+    state.cart.push({
+      ...product,
+      quantity: 1
     });
-  });
-  elements.appContent.querySelectorAll('[data-detail]').forEach((button) => {
-    button.addEventListener('click', () => {
-      openProductDetail(button.dataset.detail);
-    });
-  });
+  }
+  
+  localStorage.setItem('tl_cart', JSON.stringify(state.cart));
+  updateCartBadge();
+  alert('Ajoute nan panyen!');
 }
 
-function animateAddToCart(button, product) {
-  try {
-    const img = button.closest('.product-card')?.querySelector('img');
-    if (!img) return;
-    const rect = img.getBoundingClientRect();
-    const flying = img.cloneNode(true);
-    flying.className = 'flying-img';
-    flying.style.left = rect.left + 'px';
-    flying.style.top = rect.top + 'px';
-    document.body.appendChild(flying);
-    const cartRect = document.getElementById('topCartBadge')?.getBoundingClientRect();
-    requestAnimationFrame(() => {
-      flying.style.transform = `translate(${(cartRect?.left || window.innerWidth) - rect.left}px, ${(cartRect?.top || 24) - rect.top}px) scale(.2)`;
-      flying.style.opacity = '0.2';
-    });
-    setTimeout(() => flying.remove(), 700);
-  } catch (e) { /* ignore */ }
+function updateCartBadge() {
+  const badge = document.getElementById('cartBadge');
+  const totalItems = state.cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
+  
+  if (badge) {
+    if (totalItems > 0) {
+      badge.textContent = totalItems;
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+  }
 }
 
-function openProductDetail(productId) {
-  const product = state.products.find((p) => p.id === productId);
-  const modal = document.getElementById('productModal');
-  const content = document.getElementById('productModalContent');
-  if (!product || !modal || !content) return;
-  content.innerHTML = `
-    <div class="product-image"><img src="${escapeHtml(product.image || 'logo.jpeg')}" alt="${escapeHtml(product.name)}"></div>
-    <div class="meta">
-      <h3>${escapeHtml(product.name)}</h3>
-      <p class="muted">${escapeHtml(product.category || '')}</p>
-      <p>${escapeHtml(product.description || 'Pa gen deskripsyon')}</p>
-      <div style="margin-top:1rem;"><strong class="product-price">${formatMoney(product.price)}</strong></div>
-      <div style="margin-top:1rem;"><button class="btn btn-gold" data-add="${product.id}">Ajoute nan panyen</button></div>
-    </div>
-  `;
-  modal.classList.remove('hidden');
-  document.getElementById('overlay').classList.remove('hidden');
-  modal.querySelector('.modal-panel').classList.add('view-enter');
-  document.getElementById('productModalClose').onclick = () => closeProductDetail();
+function toggleCartDrawer() {
+  const drawer = document.getElementById('cartDrawer');
+  const overlay = document.getElementById('drawerOverlay');
+  
+  if (!drawer.classList.contains('open')) {
+    drawer.classList.add('open');
+    overlay.style.display = 'block';
+    renderCartDrawer();
+  } else {
+    drawer.classList.remove('open');
+    overlay.style.display = 'none';
+  }
 }
 
-function closeProductDetail() {
-  const modal = document.getElementById('productModal');
-  if (!modal) return;
-  modal.classList.add('hidden');
-  document.getElementById('overlay').classList.add('hidden');
-}
-
-function renderCart() {
-  elements.cartItems.innerHTML = state.cart.length ? state.cart.map((item) => `
-    <article class="cart-item">
-      <img src="${escapeHtml(item.image || 'logo.jpeg')}" alt="${escapeHtml(item.name)}">
-      <div class="cart-item-detail">
-        <strong>${escapeHtml(item.name)}</strong>
-        <small>${item.quantity} x ${formatMoney(item.price)}</small>
-      </div>
-      <button class="btn btn-outline" data-remove="${item.id}">Retire</button>
-    </article>
-  `).join('') : '<p class="muted">Panyen ou vid.</p>';
-  elements.cartTotalAmount.textContent = formatMoney(state.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0));
-  elements.cartItems.querySelectorAll('[data-remove]').forEach((button) => {
-    button.addEventListener('click', () => removeFromCart(button.dataset.remove));
-  });
-}
-
-function handleCheckout() {
-  if (!state.currentUser) {
-    showToast('Ou dwe konekte pou peye.', 'error');
-    openAuthModal();
+function renderCartDrawer() {
+  const content = document.getElementById('drawerContent');
+  const footer = document.getElementById('drawerFooter');
+  
+  if (state.cart.length === 0) {
+    content.innerHTML = '<p style="text-align: center; padding: 20px;">Panyen ou vid</p>';
+    footer.classList.add('hidden');
     return;
   }
-  showToast('Pwosesis peman inikapab kounye a. Souple retounen pita.', 'success');
+  
+  let total = 0;
+  let html = '';
+  
+  state.cart.forEach((item, index) => {
+    const itemTotal = item.price * (item.quantity || 1);
+    total += itemTotal;
+    
+    html += `
+      <div style="padding: 15px; border-bottom: 1px solid #eee;">
+        <div style="display: flex; justify-content: space-between; align-items: start;">
+          <div style="flex: 1;">
+            <h4 style="margin: 0 0 5px;">${item.name}</h4>
+            <p style="margin: 0; font-size: 0.9rem; color: #666;">
+              ${item.price} HTG x ${item.quantity || 1}
+            </p>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="removeFromCart(${index})">❌</button>
+        </div>
+      </div>
+    `;
+  });
+  
+  content.innerHTML = html;
+  
+  const totalSpan = document.getElementById('drawerTotal');
+  if (totalSpan) totalSpan.textContent = `${total} HTG`;
+  
+  footer.classList.remove('hidden');
 }
 
-function formatMoney(amount) {
-  const value = Number(amount) || 0;
-  return new Intl.NumberFormat('fr-HT', { style: 'currency', currency: state.currency }).format(value);
+function removeFromCart(index) {
+  state.cart.splice(index, 1);
+  localStorage.setItem('tl_cart', JSON.stringify(state.cart));
+  updateCartBadge();
+  renderCartDrawer();
 }
 
-function escapeHtml(text) {
-  return String(text || '').replace(/[&<>"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[char]));
+function renderView(view) {
+  if (view === 'shop') {
+    renderShop();
+  } else if (view === 'home') {
+    renderHome();
+  }
 }
 
-async function fetchProducts() {
-  if (state.products.length) return state.products;
-  const snapshot = await db.collection('products').limit(24).get();
-  state.products = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-  return state.products;
-}
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', init);
 
-async function fetchOrders() {
-  if (state.orders.length && state.ordersLoaded) return state.orders;
-  const query = state.userRole === 'admin' ? db.collection('orders') : db.collection('orders').where('userId', '==', state.currentUser?.uid || '');
-  const snapshot = await query.get();
-  state.orders = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-  state.ordersLoaded = true;
-  return state.orders;
-}
-
-async function fetchNotifications() {
-  if (state.notifications.length) return state.notifications;
-  const snapshot = await db.collection('notifications').orderBy('createdAt', 'desc').limit(12).get();
-  state.notifications = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-  updateNotificationBadge();
-  return state.notifications;
-}
-
-function updateNotificationBadge() {
-  const count = state.notifications.filter((item) => !item.read).length;
-  elements.topNotifBadge.textContent = count;
-  elements.topNotifBadge.classList.toggle('hidden', count === 0);
-}
-
-function renderSalesChart(totalRevenue, totalOrders) {
-  const canvas = document.getElementById('salesChart');
-  if (!canvas || typeof Chart === 'undefined') return;
-  const ctx = canvas.getContext('2d');
-  new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: ['Lendi', 'Madi', 'Mèkredi', 'Jedi', 'Vandredi', 'Samdi', 'Dimanch'],
-      datasets: [{ label: 'Revni', data: [totalRevenue * 0.9, totalRevenue * 0.95, totalRevenue * 0.8, totalRevenue, totalRevenue * 1.05, totalRevenue * 0.97, totalRevenue], backgroundColor: 'rgba(188, 141, 44, 0.18)', borderColor: 'rgba(188, 141, 44, 1)', fill: true, tension: 0.4 }]
-    },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: { color: 'rgba(15,23,42,0.08)' } } } }
+// Handle cartDrawer open/close with drawer overlay
+if (document.getElementById('drawerOverlay')) {
+  document.getElementById('drawerOverlay').addEventListener('click', () => {
+    const drawer = document.getElementById('cartDrawer');
+    drawer.classList.remove('open');
+    document.getElementById('drawerOverlay').style.display = 'none';
   });
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  init();
-  setTimeout(() => document.getElementById('splashScreen').classList.add('hidden'), 1000);
-});
+// Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(registration => {
+        console.log('✅ Service Worker enregistré:', registration.scope);
+      })
+      .catch(error => {
+        console.log('❌ Erreur Service Worker:', error);
+      });
+  });
+}

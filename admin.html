@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="ht">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Total Lakay - Admin Dashboard</title>
+  <link rel="icon" href="logo.jpeg" type="image/jpeg">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <!-- Sidebar Navigation -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">
+        <div class="logo-icon">TL</div>
+        <div class="logo-text">
+          <h1>Total Lakay</h1>
+          <p>Admin Panel</p>
+        </div>
+      </div>
+      <button class="sidebar-toggle" onclick="toggleSidebar()">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="#" data-section="dashboard" class="nav-item active">
+        <i class="fas fa-chart-line"></i>
+        <span>Dashboard</span>
+      </a>
+      <a href="#" data-section="products" class="nav-item">
+        <i class="fas fa-box"></i>
+        <span>Produits</span>
+      </a>
+      <a href="#" data-section="orders" class="nav-item">
+        <i class="fas fa-shopping-cart"></i>
+        <span>Commandes</span>
+      </a>
+      <a href="#" data-section="deliveries" class="nav-item">
+        <i class="fas fa-truck"></i>
+        <span>Livraisons</span>
+      </a>
+      <a href="#" data-section="users" class="nav-item">
+        <i class="fas fa-users"></i>
+        <span>Utilisateurs</span>
+      </a>
+      <a href="#" data-section="payments" class="nav-item">
+        <i class="fas fa-credit-card"></i>
+        <span>Paiements</span>
+      </a>
+      <a href="#" data-section="analytics" class="nav-item">
+        <i class="fas fa-chart-bar"></i>
+        <span>Analytics</span>
+      </a>
+      <a href="#" data-section="settings" class="nav-item">
+        <i class="fas fa-cog"></i>
+        <span>Paramètres</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button onclick="handleLogout()" class="logout-btn">
+        <i class="fas fa-sign-out-alt"></i>
+        <span>Déconnexion</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Top Bar -->
+    <header class="top-bar">
+      <div class="top-bar-left">
+        <button class="menu-toggle" onclick="toggleSidebar()">
+          <i class="fas fa-bars"></i>
+        </button>
+        <h2 class="page-title">Dashboard</h2>
+      </div>
+
+      <div class="top-bar-right">
+        <div class="search-box">
+          <input type="text" id="searchInput" placeholder="Rechercher...">
+          <i class="fas fa-search"></i>
+        </div>
+
+        <div class="notifications-container">
+          <button class="notif-btn">
+            <i class="fas fa-bell"></i>
+            <span class="notif-badge" id="notifCount">0</span>
+          </button>
+        </div>
+
+        <div class="admin-profile">
+          <img src="https://i.pravatar.cc/150?u=admin" alt="Admin" class="profile-img">
+          <div class="profile-info">
+            <span id="adminName">Admin</span>
+            <small id="adminRole">Administrator</small>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Content Area -->
+    <div class="content-wrapper">
+      <!-- Dashboard Section -->
+      <section id="dashboard-section" class="section active">
+        <div class="section-header">
+          <h2>Tableau de Bord</h2>
+          <div class="date-filter">
+            <input type="date" id="startDate">
+            <span>à</span>
+            <input type="date" id="endDate">
+            <button onclick="applyDateFilter()">Filtrer</button>
+          </div>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <h3>Revenus Totaux</h3>
+              <i class="fas fa-dollar-sign"></i>
+            </div>
+            <div class="kpi-value" id="totalRevenue">0 HTG</div>
+            <div class="kpi-change positive">
+              <i class="fas fa-arrow-up"></i> +12% ce mois
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <h3>Commandes</h3>
+              <i class="fas fa-shopping-cart"></i>
+            </div>
+            <div class="kpi-value" id="totalOrders">0</div>
+            <div class="kpi-change positive">
+              <i class="fas fa-arrow-up"></i> +5 aujourd'hui
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <h3>Clients Actifs</h3>
+              <i class="fas fa-users"></i>
+            </div>
+            <div class="kpi-value" id="activeUsers">0</div>
+            <div class="kpi-change positive">
+              <i class="fas fa-arrow-up"></i> +8 cette semaine
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <h3>Produits Vendus</h3>
+              <i class="fas fa-box"></i>
+            </div>
+            <div class="kpi-value" id="totalSold">0</div>
+            <div class="kpi-change positive">
+              <i class="fas fa-arrow-up"></i> +3% ce mois
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="charts-grid">
+          <div class="chart-container">
+            <h3>Revenus - 30 jours</h3>
+            <canvas id="revenueChart"></canvas>
+          </div>
+
+          <div class="chart-container">
+            <h3>Commandes par Statut</h3>
+            <canvas id="orderStatusChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Recent Orders -->
+        <div class="recent-section">
+          <h3>Commandes Récentes</h3>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID Commande</th>
+                  <th>Client</th>
+                  <th>Total</th>
+                  <th>Statut</th>
+                  <th>Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="recentOrdersTable">
+                <tr>
+                  <td colspan="6" class="empty-state">Chargement...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Products Section -->
+      <section id="products-section" class="section">
+        <div class="section-header">
+          <h2>Gestion des Produits</h2>
+          <button onclick="openProductModal()" class="btn-primary">
+            <i class="fas fa-plus"></i> Nouveau Produit
+          </button>
+        </div>
+
+        <div class="filters-bar">
+          <input type="text" id="productSearch" placeholder="Rechercher produits..." onkeyup="filterProducts()">
+          <select id="categoryFilter" onchange="filterProducts()">
+            <option value="">Toutes catégories</option>
+            <option value="electronics">Électronique</option>
+            <option value="clothing">Vêtements</option>
+            <option value="school">École</option>
+            <option value="home">Maison</option>
+          </select>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Image</th>
+                <th>Nom</th>
+                <th>Catégorie</th>
+                <th>Prix</th>
+                <th>Stock</th>
+                <th>Ventes</th>
+                <th>Rating</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="productsTable">
+              <tr>
+                <td colspan="8" class="empty-state">Chargement...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Orders Section -->
+      <section id="orders-section" class="section">
+        <div class="section-header">
+          <h2>Gestion des Commandes</h2>
+          <button onclick="exportOrders()" class="btn-secondary">
+            <i class="fas fa-download"></i> Exporter
+          </button>
+        </div>
+
+        <div class="filters-bar">
+          <input type="text" id="orderSearch" placeholder="Chercher commande...">
+          <select id="statusFilter" onchange="filterOrders()">
+            <option value="">Tous statuts</option>
+            <option value="pending">En attente</option>
+            <option value="confirmed">Confirmée</option>
+            <option value="paid">Payée</option>
+            <option value="shipped">Expédiée</option>
+            <option value="delivered">Livrée</option>
+            <option value="cancelled">Annulée</option>
+          </select>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Client</th>
+                <th>Articles</th>
+                <th>Total</th>
+                <th>Statut</th>
+                <th>Paiement</th>
+                <th>Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="ordersTable">
+              <tr>
+                <td colspan="8" class="empty-state">Chargement...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Deliveries Section -->
+      <section id="deliveries-section" class="section">
+        <div class="section-header">
+          <h2>Suivi des Livraisons</h2>
+          <button onclick="assignDelivery()" class="btn-primary">
+            <i class="fas fa-plus"></i> Assigner Livraison
+          </button>
+        </div>
+
+        <div class="filters-bar">
+          <select id="deliveryStatusFilter" onchange="filterDeliveries()">
+            <option value="">Tous statuts</option>
+            <option value="pending">En attente</option>
+            <option value="accepted">Acceptée</option>
+            <option value="in_delivery">En cours</option>
+            <option value="delivered">Livrée</option>
+            <option value="failed">Échouée</option>
+          </select>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID Livraison</th>
+                <th>Commande</th>
+                <th>Livreur</th>
+                <th>Statut</th>
+                <th>Pickup</th>
+                <th>Delivery</th>
+                <th>ETA</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="deliveriesTable">
+              <tr>
+                <td colspan="8" class="empty-state">Chargement...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Users Section -->
+      <section id="users-section" class="section">
+        <div class="section-header">
+          <h2>Gestion des Utilisateurs</h2>
+          <button onclick="openUserModal()" class="btn-primary">
+            <i class="fas fa-plus"></i> Nouvel Utilisateur
+          </button>
+        </div>
+
+        <div class="filters-bar">
+          <input type="text" id="userSearch" placeholder="Rechercher utilisateurs...">
+          <select id="roleFilter" onchange="filterUsers()">
+            <option value="">Tous rôles</option>
+            <option value="client">Client</option>
+            <option value="delivery">Livreur</option>
+            <option value="admin">Admin</option>
+          </select>
+          <select id="statusFilter" onchange="filterUsers()">
+            <option value="">Tous statuts</option>
+            <option value="active">Actif</option>
+            <option value="inactive">Inactif</option>
+            <option value="suspended">Suspendu</option>
+            <option value="blocked">Bloqué</option>
+          </select>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nom</th>
+                <th>Email</th>
+                <th>Téléphone</th>
+                <th>Rôle</th>
+                <th>Statut</th>
+                <th>Inscription</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="usersTable">
+              <tr>
+                <td colspan="8" class="empty-state">Chargement...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Payments Section -->
+      <section id="payments-section" class="section">
+        <div class="section-header">
+          <h2>Gestion des Paiements</h2>
+          <button onclick="exportPayments()" class="btn-secondary">
+            <i class="fas fa-download"></i> Rapport
+          </button>
+        </div>
+
+        <div class="filters-bar">
+          <select id="paymentStatusFilter" onchange="filterPayments()">
+            <option value="">Tous statuts</option>
+            <option value="completed">Complété</option>
+            <option value="pending">En attente</option>
+            <option value="failed">Échoué</option>
+            <option value="refunded">Remboursé</option>
+          </select>
+          <select id="paymentMethodFilter" onchange="filterPayments()">
+            <option value="">Toutes méthodes</option>
+            <option value="MonCash">MonCash</option>
+            <option value="Card">Carte</option>
+            <option value="Cash">Espèces</option>
+          </select>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID Paiement</th>
+                <th>Commande</th>
+                <th>Montant</th>
+                <th>Méthode</th>
+                <th>Statut</th>
+                <th>Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="paymentsTable">
+              <tr>
+                <td colspan="7" class="empty-state">Chargement...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Analytics Section -->
+      <section id="analytics-section" class="section">
+        <div class="section-header">
+          <h2>Analytics & Rapports</h2>
+        </div>
+
+        <div class="analytics-grid">
+          <div class="analytics-card">
+            <h3>Performance Mensuelle</h3>
+            <canvas id="monthlyPerformanceChart"></canvas>
+          </div>
+
+          <div class="analytics-card">
+            <h3>Top 10 Produits</h3>
+            <div id="topProductsList"></div>
+          </div>
+
+          <div class="analytics-card">
+            <h3>Distribution Géographique</h3>
+            <div id="geoMap" style="height: 300px; background: #f0f0f0; border-radius: 8px;"></div>
+          </div>
+
+          <div class="analytics-card">
+            <h3>Taux de Conversion</h3>
+            <div class="metric-row">
+              <span>Visiteurs</span>
+              <strong id="visitorCount">0</strong>
+            </div>
+            <div class="metric-row">
+              <span>Clients</span>
+              <strong id="clientCount">0</strong>
+            </div>
+            <div class="metric-row">
+              <span>Taux (%)</span>
+              <strong id="conversionRate">0%</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Settings Section -->
+      <section id="settings-section" class="section">
+        <div class="section-header">
+          <h2>Paramètres</h2>
+        </div>
+
+        <div class="settings-container">
+          <div class="settings-group">
+            <h3>Paramètres Généraux</h3>
+            <div class="setting-item">
+              <label>Nom du Site</label>
+              <input type="text" id="siteName" value="Total Lakay">
+            </div>
+            <div class="setting-item">
+              <label>Email de Contact</label>
+              <input type="email" id="siteEmail" value="totallakayst@gmail.com">
+            </div>
+            <div class="setting-item">
+              <label>Téléphone</label>
+              <input type="tel" id="sitePhone" value="+509 3882-4664">
+            </div>
+            <button onclick="saveSettings()" class="btn-primary">Enregistrer</button>
+          </div>
+
+          <div class="settings-group">
+            <h3>Paramètres de Paiement</h3>
+            <div class="setting-item">
+              <label>MonCash Activation</label>
+              <input type="checkbox" id="moncashEnabled" checked>
+            </div>
+            <div class="setting-item">
+              <label>Commission (%)</label>
+              <input type="number" id="commission" value="5" min="0" max="100">
+            </div>
+            <button onclick="saveSettings()" class="btn-primary">Enregistrer</button>
+          </div>
+
+          <div class="settings-group">
+            <h3>Paramètres de Livraison</h3>
+            <div class="setting-item">
+              <label>Frais de Base (HTG)</label>
+              <input type="number" id="baseShipping" value="100">
+            </div>
+            <div class="setting-item">
+              <label>Délai Moyen (jours)</label>
+              <input type="number" id="avgDelivery" value="3">
+            </div>
+            <button onclick="saveSettings()" class="btn-primary">Enregistrer</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Modals -->
+  <!-- Product Modal -->
+  <div id="productModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Nouveau Produit</h3>
+        <button class="close-btn" onclick="closeProductModal()">&times;</button>
+      </div>
+      <form id="productForm" onsubmit="saveProduct(event)">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nom *</label>
+            <input type="text" id="productName" required>
+          </div>
+          <div class="form-group">
+            <label>Catégorie *</label>
+            <select id="productCategory" required>
+              <option>Electronics</option>
+              <option>Clothing</option>
+              <option>School</option>
+              <option>Home</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Prix (HTG) *</label>
+            <input type="number" id="productPrice" required min="0">
+          </div>
+          <div class="form-group">
+            <label>Prix Réduit</label>
+            <input type="number" id="productDiscountPrice" min="0">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Stock *</label>
+            <input type="number" id="productStock" required min="0">
+          </div>
+          <div class="form-group">
+            <label>SKU</label>
+            <input type="text" id="productSku">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Description</label>
+          <textarea id="productDescription" rows="4"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Image URL</label>
+          <input type="url" id="productImage">
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn-primary">Enregistrer</button>
+          <button type="button" onclick="closeProductModal()" class="btn-secondary">Annuler</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Order Modal -->
+  <div id="orderModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Détails de la Commande</h3>
+        <button class="close-btn" onclick="closeOrderModal()">&times;</button>
+      </div>
+      <div id="orderDetails"></div>
+      <div class="form-actions">
+        <button onclick="updateOrderStatus()" class="btn-primary">Mettre à jour</button>
+        <button onclick="closeOrderModal()" class="btn-secondary">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>
