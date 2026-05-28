@@ -29,12 +29,23 @@ const storage = firebase.storage();
 // ---------- ÉTAT GLOBAL ----------
 let currentUser = null;
 let userRole = null;
-let isAdmin = false;
 let pageRole = 'client';
+let isAdmin = false;
+const roleAlias = {
+  admin: 'admin',
+  client: 'client',
+  livreur: 'vendor',
+  vendor: 'vendor'
+};
 const roleViews = {
-  client: ['home','shop','profile','checkout','orders','history','favorites','settings','services','privacy','terms','specialOffers'],
-  admin: ['home','admin','logistics','profile','orders','history','settings','services','privacy','terms'],
-  vendor: ['logistics','tracking','home','services','privacy','terms']
+  client: ['home','shop','profile','checkout','orders','history','favorites','settings','services','privacy','terms','specialOffers','aiPage'],
+  admin: ['home','admin','logistics','profile','orders','history','settings','services','privacy','terms','specialOffers','aiPage'],
+  vendor: ['home','logistics','tracking','profile','orders','services','privacy','terms','aiPage']
+};
+const rolePermissions = {
+  admin: ['manageUsers','manageOrders','manageDeliveries','viewStatistics','viewLogs','viewAllOrders'],
+  vendor: ['viewAssignedOrders','updateDeliveryStatus','viewDeliveryInfo','viewNotifications','viewHistory'],
+  client: ['viewProducts','placeOrders','viewHistory','manageProfile','trackOrders']
 };
 let currentLang = localStorage.getItem('totalLakayLang') || 'ht';
 let currentCurrency = localStorage.getItem('totalLakayCurrency') || 'HTG';
@@ -61,15 +72,27 @@ const DEFAULT_PORT_AU_PRINCE = [18.5392, -72.3350];
 const DEFAULT_WAREHOUSE_COORDS = [18.55, -72.30];
 const AI_PROMPT_PRODUCT_LIMIT = 12;
 
+function normalizeRole(rawRole) {
+  const role = String(rawRole || 'client').toLowerCase();
+  return roleAlias[role] || 'client';
+}
+
 function initPageRole() {
-  const role = document.body?.dataset?.pageRole || 'client';
-  pageRole = ['client', 'admin', 'vendor'].includes(role) ? role : 'client';
+  const storedRole = localStorage.getItem('totalLakayRole');
+  pageRole = normalizeRole(storedRole);
+  applyPageRoleUI();
+}
+
+function setPageRole(role) {
+  pageRole = normalizeRole(role);
+  localStorage.setItem('totalLakayRole', role || 'client');
   applyPageRoleUI();
 }
 
 function getDefaultViewForRole(role) {
-  if (role === 'admin') return 'admin';
-  if (role === 'vendor') return 'logistics';
+  const normalized = normalizeRole(role);
+  if (normalized === 'admin') return 'admin';
+  if (normalized === 'vendor') return 'logistics';
   return 'home';
 }
 
@@ -78,7 +101,8 @@ function isRoleAllowed(view) {
 }
 
 function enforcePageRole(view) {
-  return isRoleAllowed(view) ? view : getDefaultViewForRole(pageRole);
+  const normalizedView = String(view || '').trim();
+  return isRoleAllowed(normalizedView) ? normalizedView : getDefaultViewForRole(pageRole);
 }
 
 function isValidCoords(coords) {
@@ -92,6 +116,7 @@ function applyPageRoleUI() {
   document.querySelectorAll('.vendor-only').forEach(el => el.classList.toggle('hidden', pageRole !== 'vendor'));
   document.querySelectorAll('.client-only').forEach(el => el.classList.toggle('hidden', pageRole !== 'client'));
   document.querySelectorAll('.admin-or-vendor-only').forEach(el => el.classList.toggle('hidden', pageRole !== 'admin' && pageRole !== 'vendor'));
+  document.querySelectorAll('.user-only').forEach(el => el.classList.toggle('hidden', !currentUser));
 }
 
 function escapeHtml(text) {
@@ -1300,70 +1325,113 @@ function debounce(func, delay) {
 // ============================================
 // AUTHENTIFICATION AVEC RÔLES
 // ============================================
+const SESSION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 jours
+
 auth.onAuthStateChanged(async (user) => {
   currentUser = user;
   const authBtn = document.getElementById('authBtn');
   const logoutBtn = document.getElementById('logoutBtn');
   const adminElements = document.querySelectorAll('.admin-only');
+  const vendorElements = document.querySelectorAll('.vendor-only');
   const userElements = document.querySelectorAll('.user-only');
 
   if (user) {
+    try {
+      await user.reload();
+    } catch (err) {
+      console.warn('Unable to refresh user state:', err);
+    }
+
     if (!user.emailVerified) {
       showMessage(t('emailVerifyWarning'), 'error');
-      setTimeout(() => { if (currentUser && !currentUser.emailVerified) auth.signOut(); }, 5000);
+      await auth.signOut();
+      currentUser = null;
+      setPageRole('client');
+      renderView('home');
       return;
     }
 
-    try {
-      const userDoc = await db.collection('users').doc(user.uid).get();
-      if (userDoc.exists) {
-        userRole = userDoc.data().role || 'client';
-        isAdmin = (userRole === 'admin');
-        isPremium = userDoc.data().isPremium || isAdmin; // Les admins sont premium d'office
-
-        // Vérifier consentement
-        if (!isAdmin && !userDoc.data().termsAccepted) {
-          document.getElementById('consentModal')?.classList.remove('hidden');
-        }
-      } else {
-        userRole = 'client'; isAdmin = false;
-        await db.collection('users').doc(user.uid).set({
-          email: user.email, displayName: user.displayName || '',
-          photoURL: user.photoURL || '', role: 'client',
-          emailVerified: true, termsAccepted: false, createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        document.getElementById('consentModal')?.classList.remove('hidden');
+    if (user.metadata?.lastSignInTime) {
+      const signedInAt = new Date(user.metadata.lastSignInTime).getTime();
+      if (Date.now() - signedInAt > SESSION_EXPIRY_MS) {
+        showMessage(t('loggedOut') + ' (session expirée)', 'info');
+        await auth.signOut();
+        currentUser = null;
+        setPageRole('client');
+        renderView('home');
+        return;
       }
-    } catch (e) { userRole = 'client'; isAdmin = false; }
+    }
 
+    let userDoc;
+    try {
+      const snapshot = await db.collection('users').doc(user.uid).get();
+      if (!snapshot.exists) {
+        const defaults = {
+          uid: user.uid,
+          name: user.displayName || '',
+          email: user.email || '',
+          role: 'client',
+          permissions: rolePermissions.client,
+          status: 'active',
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        await db.collection('users').doc(user.uid).set(defaults);
+        userDoc = { exists: true, data: () => defaults };
+      } else {
+        userDoc = snapshot;
+      }
+    } catch (err) {
+      console.error('Firestore user lookup failed:', err);
+      showMessage(t('errorOccurred') + err.message, 'error');
+      userRole = 'client';
+      isAdmin = false;
+      setPageRole('client');
+      renderView('home');
+      return;
+    }
+
+    const rawRole = String(userDoc.data().role || 'client').toLowerCase();
+    userRole = rawRole;
+    pageRole = normalizeRole(rawRole);
+    isAdmin = pageRole === 'admin';
+
+    const expectedPermissions = rolePermissions[pageRole] || [];
+    const storedPermissions = Array.isArray(userDoc.data().permissions) ? userDoc.data().permissions : [];
+    if (!expectedPermissions.every((permission) => storedPermissions.includes(permission))) {
+      await db.collection('users').doc(user.uid).update({ permissions: expectedPermissions });
+    }
+
+    setPageRole(rawRole);
     if (authBtn) authBtn.classList.add('hidden');
     if (logoutBtn) logoutBtn.classList.remove('hidden');
     userElements.forEach(el => el.classList.remove('hidden'));
-
-    if (isAdmin) {
-      adminElements.forEach(el => el.classList.remove('hidden'));
-    } else {
-      adminElements.forEach(el => el.classList.add('hidden'));
-    }
+    adminElements.forEach(el => el.classList.toggle('hidden', pageRole !== 'admin'));
+    vendorElements.forEach(el => el.classList.toggle('hidden', pageRole !== 'vendor'));
 
     if (logoutBtn) {
-      logoutBtn.innerHTML = `🚪 <span>${(isAdmin ? 'Admin: ' : '') + t('logout')}</span>`;
+      logoutBtn.innerHTML = `🚪 <span>${isAdmin ? 'Admin: ' : ''}${t('logout')}</span>`;
     }
     listenNotifications();
   } else {
     if (authBtn) authBtn.classList.remove('hidden');
     if (logoutBtn) logoutBtn.classList.add('hidden');
     adminElements.forEach(el => el.classList.add('hidden'));
+    vendorElements.forEach(el => el.classList.add('hidden'));
     userElements.forEach(el => el.classList.add('hidden'));
-    isAdmin = false; userRole = null;
+    userRole = null;
+    isAdmin = false;
+    setPageRole('client');
   }
 
   if (user) {
     updatePresence();
-    setInterval(updatePresence, 2 * 60 * 1000); // Mettre à jour toutes les 2 minutes
+    setInterval(updatePresence, 2 * 60 * 1000);
   }
 
-  if (currentView === 'admin' && !isAdmin) currentView = 'home';
+  if (!isRoleAllowed(currentView)) {
+    currentView = getDefaultViewForRole(pageRole);
+  }
   updateCartBadge();
   renderView(currentView);
   if (isAdmin) loadAllData();
@@ -1522,71 +1590,77 @@ document.getElementById('logoutBtn')?.addEventListener('click', () => {
 });
 
 // ============================================
-// MENU DROPDOWN
+// NAVIGATION (centralized)
 // ============================================
-document.getElementById('navShop')?.addEventListener('click', (e) => {
-  e.stopPropagation();
-  renderView('shop');
-});
+function initNavigation() {
+  const navMap = [
+    { id: 'navHome', view: () => getDefaultViewForRole(pageRole) },
+    { id: 'navShop', view: 'shop' },
+    { id: 'navAI', view: 'aiPage' },
+    { id: 'navProfile', view: 'profile' },
+    { id: 'navAdmin', view: 'admin' },
+    { id: 'navLogistics', view: 'logistics' }
+  ];
 
-document.getElementById('navAI')?.addEventListener('click', (e) => {
-  e.stopPropagation();
-  renderView('aiPage');
-});
+  navMap.forEach(item => {
+    const el = document.getElementById(item.id);
+    if (!el) return;
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      setActiveNav(item.id);
+      const view = typeof item.view === 'function' ? item.view() : item.view;
+      currentView = view;
+      renderView(view);
+    });
+  });
 
-document.getElementById('menuAI')?.addEventListener('click', (e) => {
-  e.preventDefault();
-  document.getElementById('dropdownMenu')?.classList.add('hidden');
-  renderView('aiPage');
-});
+  // Dropdown / mobile menu
+  const menuMap = [
+    { id: 'menuHome', view: () => (isAdmin ? 'admin' : 'home') },
+    { id: 'menuShop', view: 'shop' },
+    { id: 'menuFavorites', view: 'favorites' },
+    { id: 'menuAI', view: 'aiPage' },
+    { id: 'menuSpecial', view: 'specialOffers' },
+    { id: 'menuHistory', view: 'history' },
+    { id: 'menuSettings', view: 'settings' },
+    { id: 'menuLogistics', view: 'logistics' }
+  ];
 
-document.getElementById('menuBtn')?.addEventListener('click', (e) => {
-  e.stopPropagation();
-  const dropdown = document.getElementById('dropdownMenu');
-  if (dropdown) {
-    dropdown.classList.toggle('hidden');
-    // Mettre à jour les sélecteurs mobiles avec les valeurs actuelles
-    const lsM = document.getElementById('langSwitchMobile');
-    const csM = document.getElementById('currencySwitchMobile');
-    if (lsM) lsM.value = currentLang;
-    if (csM) csM.value = currentCurrency;
-  }
-});
-document.addEventListener('click', (e) => {
-  if (!e.target.closest('#menuDropdown')) {
-    document.getElementById('dropdownMenu')?.classList.add('hidden');
-  } else if (e.target.tagName === 'A' || e.target.closest('a')) {
-    document.getElementById('dropdownMenu')?.classList.add('hidden');
-  }
-});
-document.getElementById('menuSpecial')?.addEventListener('click', (e) => {
-  e.preventDefault(); document.getElementById('dropdownMenu')?.classList.add('hidden');
-  currentView = 'specialOffers'; renderView('specialOffers');
-});
-document.getElementById('menuSettings')?.addEventListener('click', (e) => {
-  e.preventDefault(); document.getElementById('dropdownMenu')?.classList.add('hidden');
-  currentView = 'settings'; renderView('settings');
-});
-document.getElementById('menuHistory')?.addEventListener('click', (e) => {
-  e.preventDefault(); document.getElementById('dropdownMenu')?.classList.add('hidden');
-  currentView = 'history'; renderView('history');
-});
-document.getElementById('menuFavorites')?.addEventListener('click', (e) => {
-  e.preventDefault(); document.getElementById('dropdownMenu')?.classList.add('hidden');
-  currentView = 'favorites'; renderView('favorites');
-});
-document.getElementById('menuHome')?.addEventListener('click', (e) => {
-  e.preventDefault(); document.getElementById('dropdownMenu')?.classList.add('hidden');
-  renderView(isAdmin ? 'admin' : 'home');
-});
-document.getElementById('menuShop')?.addEventListener('click', (e) => {
-  e.preventDefault(); document.getElementById('dropdownMenu')?.classList.add('hidden');
-  renderView('shop');
-});
-document.getElementById('menuLogistics')?.addEventListener('click', (e) => {
-  e.preventDefault(); document.getElementById('dropdownMenu')?.classList.add('hidden');
-  if (isAdmin) renderView('logistics');
-});
+  menuMap.forEach(m => {
+    const el = document.getElementById(m.id);
+    if (!el) return;
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      document.getElementById('dropdownMenu')?.classList.add('hidden');
+      const view = typeof m.view === 'function' ? m.view() : m.view;
+      // Only allow logistics if admin/vendor
+      if (m.id === 'menuLogistics' && !isRoleAllowed('logistics')) return;
+      currentView = view;
+      renderView(view);
+      window.scrollTo(0, 0);
+    });
+  });
+
+  document.getElementById('menuBtn')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const dropdown = document.getElementById('dropdownMenu');
+    if (dropdown) {
+      dropdown.classList.toggle('hidden');
+      const lsM = document.getElementById('langSwitchMobile');
+      const csM = document.getElementById('currencySwitchMobile');
+      if (lsM) lsM.value = currentLang;
+      if (csM) csM.value = currentCurrency;
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#menuDropdown')) {
+      document.getElementById('dropdownMenu')?.classList.add('hidden');
+    } else if (e.target.tagName === 'A' || e.target.closest('a')) {
+      document.getElementById('dropdownMenu')?.classList.add('hidden');
+    }
+  });
+}
 
 function renderSpecialOffers(app) {
   const promoProducts = products.filter(p => p.oldPrice && p.oldPrice > p.price);
@@ -1709,31 +1783,6 @@ document.getElementById('currencySwitchMobile')?.addEventListener('change', (e) 
   renderView(currentView);
   document.getElementById('dropdownMenu')?.classList.add('hidden');
 });
-
-// ============================================
-// NAVIGATION
-// ============================================
-document.getElementById('navHome')?.addEventListener('click', (e) => {
-  e.preventDefault(); setActiveNav('navHome');
-  currentView = getDefaultViewForRole(pageRole); renderView(currentView);
-});
-document.getElementById('navShop')?.addEventListener('click', (e) => {
-  e.preventDefault(); setActiveNav('navShop');
-  currentView = 'shop'; renderView('shop');
-});
-document.getElementById('navProfile')?.addEventListener('click', (e) => {
-  e.preventDefault(); setActiveNav('navProfile');
-  currentView = 'profile'; renderView('profile');
-});
-document.getElementById('navAdmin')?.addEventListener('click', (e) => {
-  e.preventDefault(); setActiveNav('navAdmin');
-  currentView = 'admin'; renderView('admin');
-});
-document.getElementById('navLogistics')?.addEventListener('click', (e) => {
-  e.preventDefault(); setActiveNav('navLogistics');
-  currentView = 'logistics'; renderView('logistics');
-});
-
 
 function setActiveNav(activeId) {
   document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
@@ -2017,12 +2066,12 @@ function refreshProductGrid() {
 // RENDU VUES
 // ============================================
 async function renderView(view) {
-  view = enforcePageRole(view);
+  const requestedView = String(view || '').trim() || getDefaultViewForRole(pageRole);
+  view = enforcePageRole(requestedView);
   currentView = view;
   const app = document.getElementById('appContent');
   if (!app) return;
 
-  // Animation de sortie
   app.style.opacity = '0';
   app.style.transform = 'translateY(10px)';
 
@@ -2030,7 +2079,6 @@ async function renderView(view) {
     view = enforcePageRole(view);
     applyPageRoleUI();
 
-    // Afficher/cacher la barre de recherche
     const searchBar = document.getElementById('searchFilterBar');
     if (searchBar) {
       if (view === 'shop' || view === 'specialOffers') {
@@ -2040,9 +2088,15 @@ async function renderView(view) {
       }
     }
 
-    if (pageRole === 'admin' && (view === 'home' || view === 'admin')) {
-      await renderAdminDashboard(app);
-    } else {
+    const requireLogin = ['checkout', 'orders', 'profile', 'history', 'favorites'];
+    if (!currentUser && requireLogin.includes(view)) {
+      showMessage(t('loginRequired'), 'error');
+      openAuthModal();
+      renderView('home');
+      return;
+    }
+
+    try {
       switch (view) {
         case 'home': await renderHome(app); break;
         case 'shop': await renderShop(app); break;
@@ -2057,14 +2111,16 @@ async function renderView(view) {
         case 'privacy': renderPrivacy(app); break;
         case 'terms': renderTerms(app); break;
         case 'checkout': await renderCheckout(app); break;
-        case 'admin': if (pageRole === 'admin') { await renderAdminDashboard(app); } else { renderView(getDefaultViewForRole(pageRole)); } break;
-        case 'logistics': if (pageRole === 'admin') { await renderLogisticsDashboard(app); } else if (pageRole === 'vendor') { await renderVendorDashboard(app); } else { renderView('home'); } break;
-        case 'tracking': await renderOrderTracking(app); break;
+        case 'admin': if (pageRole === 'admin') { await renderAdminDashboard(app); } else { await renderView(getDefaultViewForRole(pageRole)); } break;
+        case 'logistics': if (pageRole === 'admin') { await renderLogisticsDashboard(app); } else if (pageRole === 'vendor') { await renderVendorDashboard(app); } else { await renderView('home'); } break;
+        case 'tracking': if (pageRole === 'vendor' || pageRole === 'admin') { await renderOrderTracking(app); } else { await renderView('home'); } break;
         default: await renderHome(app);
       }
+    } catch (err) {
+      console.error('renderView error:', err);
+      app.innerHTML = `<div class="card text-center"><p>⛔ ${t('errorOccurred')} ${escapeHtml(err.message || err)}</p></div>`;
     }
 
-    // Animation d'entrée
     app.style.transition = 'all 0.4s ease-out';
     app.style.opacity = '1';
     app.style.transform = 'translateY(0)';
@@ -4451,6 +4507,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initPageRole();
   
   setupHeaderActionButtons();
+  initNavigation();
 
   // Charger la configuration IA AVANT tout
   try {
@@ -4477,9 +4534,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  document.getElementById('menuLogistics')?.addEventListener('click', (e) => {
-    e.preventDefault(); renderView('logistics'); window.scrollTo(0, 0);
-  });
+  // menuLogistics handled by initNavigation()
 
   document.getElementById('footerContact')?.addEventListener('click', (e) => {
     e.preventDefault();

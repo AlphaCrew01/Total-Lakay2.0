@@ -194,10 +194,9 @@
       <img src="logo.jpeg" alt="Total Lakay" class="hero-logo" onerror="this.style.display='none';">
       <h1 class="hero-title">🏠 Byenveni nan Total Lakay</h1>
       <p class="hero-subtitle">Tout bagay lakay ou nan yon sèl klike.</p>
-      <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:25px;">
-        <a href="client.html" class="btn btn-gold" style="padding:12px 22px;">Client</a>
-        <a href="admin.html" class="btn btn-outline" style="padding:12px 22px;">Admin</a>
-        <a href="vendeur.html" class="btn btn-outline" style="padding:12px 22px;">Livreur</a>
+      <div class="hero-actions" style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-top:25px;">
+        <button class="btn btn-gold" style="padding:12px 22px;" onclick="renderView('shop')">🛍️ <span data-i18n="goShop">Boutik</span></button>
+        <button class="btn btn-outline" style="padding:12px 22px;" onclick="openAuthModal()">🔐 <span data-i18n="login">Konekte</span></button>
       </div>
   <!-- ============================================ -->
   <!-- MODAL DE CONNEXION -->
